@@ -10,6 +10,7 @@ import {
   updateRegistrationStatus,
 } from "@/services/firestore/registrations";
 import { addParticipant } from "@/services/firestore/participants";
+import { fetchUsers, User } from "@/services/firestore/users";
 import { Registration, RegistrationStatus } from "@/types/tournament";
 import { Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -28,11 +29,20 @@ const RegistrationsManagement = () => {
   const [tournaments, setTournaments] = useState<any[]>([]);
   const [games, setGames] = useState<any[]>([]);
   const [registrations, setRegistrations] = useState<Registration[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
-    fetchTournaments().then(setTournaments);
+    const loadInitialData = async () => {
+      const [tournamentsResponse, usersResponse] = await Promise.all([
+        fetchTournaments(),
+        fetchUsers(),
+      ]);
+      setTournaments(tournamentsResponse);
+      setUsers(usersResponse);
+    };
+    loadInitialData();
   }, []);
 
   useEffect(() => {
@@ -127,7 +137,7 @@ const RegistrationsManagement = () => {
               <SelectValue placeholder="All games" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">All games</SelectItem>
+              <SelectItem value="all">All games</SelectItem>
               {games.map((game) => (
                 <SelectItem value={game.id} key={game.id}>
                   {game.name}
@@ -161,7 +171,12 @@ const RegistrationsManagement = () => {
                   className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between border-b pb-4 last:border-0"
                 >
                   <div>
-                    <p className="font-medium">{registration.user_id}</p>
+                    <p className="font-medium">
+                      {users.find((user) => user.id === registration.user_id)?.name ?? registration.user_id}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      {users.find((user) => user.id === registration.user_id)?.email ?? ""}
+                    </p>
                     <p className="text-sm text-muted-foreground">
                       Game: {games.find((game) => game.id === registration.game_id)?.name ?? "Unknown"}
                     </p>
