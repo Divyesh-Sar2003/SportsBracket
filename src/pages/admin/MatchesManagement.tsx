@@ -29,6 +29,10 @@ const MatchesManagement = () => {
   }, []);
 
   useEffect(() => {
+    setGameId("");
+  }, [tournamentId]);
+
+  useEffect(() => {
     const load = async () => {
       if (!tournamentId) {
         setGames([]);
@@ -38,15 +42,27 @@ const MatchesManagement = () => {
       }
 
       setLoading(true);
-      const [gamesResponse, participantsResponse, matchesResponse] = await Promise.all([
-        fetchGames(tournamentId),
-        fetchParticipants({ tournamentId, gameId: gameId || undefined }),
-        fetchMatches({ tournamentId, gameId: gameId || undefined }),
-      ]);
-      setGames(gamesResponse);
-      setParticipants(participantsResponse);
-      setMatches(matchesResponse);
-      setLoading(false);
+      try {
+        const [gamesResponse, participantsResponse, matchesResponse] = await Promise.all([
+          fetchGames(tournamentId),
+          fetchParticipants({ tournamentId, gameId: gameId || undefined }),
+          fetchMatches({ tournamentId, gameId: gameId || undefined }),
+        ]);
+        setGames(gamesResponse);
+        setParticipants(participantsResponse);
+        setMatches(matchesResponse);
+      } catch (error: any) {
+        toast({
+          title: "Error loading data",
+          description: error.message,
+          variant: "destructive",
+        });
+        setGames([]);
+        setParticipants([]);
+        setMatches([]);
+      } finally {
+        setLoading(false);
+      }
     };
 
     load();
