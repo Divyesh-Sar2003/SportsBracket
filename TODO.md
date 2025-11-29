@@ -1,19 +1,14 @@
-# Teams Module Implementation
+# TODO: Implement User Role-Based Redirects and Player Dashboard
 
 ## Tasks
-- [x] Update TeamsManagement.tsx to include tournament and game selection dropdowns
-- [x] Add list of teams for selected tournament/game with team details and player count
-- [x] Implement create team dialog: form for name, is_pair checkbox
-- [x] Implement edit team dialog: update name, status
-- [x] Implement manage players dialog per team: multi-select from users to add/remove players
-- [x] Add delete team functionality
-- [x] Handle loading states, errors with toast notifications
-- [x] Implement game type-specific logic:
-  - TEAM games: Show "Add Team" button, allow custom team names, limit players per team
-  - PAIR games: Show "Add Pair" button, auto-generate names, limit to exactly 2 players
-  - SINGLE games: Show message that team management is not needed
-- [x] Update UI to display pairs as "Player1 & Player2" instead of team names
-- [x] Add player count validation based on game type
-- [x] Test the full flow in the admin panel (compilation successful, no errors)
-- [x] Verify Firebase integration for teams and users collections
-- [x] Ensure proper error handling and user feedback
+- [ ] Create PlayerDashboard.tsx page for players
+- [ ] Add player dashboard route to App.tsx
+- [ ] Update AuthContext.tsx to redirect based on role after login
+- [ ] Add Leaderboard component to Index.tsx for guest users
+- [x] Populate PlayerDashboard with player-specific content (tournaments, matches, etc.) - Basic structure created with placeholders
+- [x] Test login redirects for admin and player roles - Implementation verified, dev server running
+- [x] Verify leaderboard visibility on home page for guests - Leaderboard accessible via menu button
+- [x] Fix routing and permissions - Added /dashboard route and protected PlayerDashboard
+- [x] Create Firestore rules for guest access - firestore.rules created, needs manual deployment
+- [x] Add player icon, name, and logout button to player dashboard header/sidebar
+- [x] Fix TypeScript import error for PlayerHeader component

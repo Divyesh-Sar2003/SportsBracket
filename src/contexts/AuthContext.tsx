@@ -5,6 +5,8 @@ import {
   onAuthStateChanged,
   signInWithEmailAndPassword,
   signOut as firebaseSignOut,
+  signInWithPopup,
+  GoogleAuthProvider,
 } from "firebase/auth";
 import { doc, getDoc, serverTimestamp, setDoc } from "firebase/firestore";
 import { useNavigate } from "react-router-dom";
@@ -16,6 +18,8 @@ interface AuthContextType {
   isAdmin: boolean;
   signUp: (email: string, password: string, metadata: any) => Promise<{ error: any }>;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
+  signInWithGoogle: () => Promise<{ error: any; user?: User; isNewUser?: boolean }>;
+  signUpWithGoogle: (metadata: any) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
 }
 
@@ -40,6 +44,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     return () => unsubscribe();
   }, []);
+
+  useEffect(() => {
+    if (!loading && user) {
+      if (isAdmin) {
+        navigate("/admin");
+      } else {
+        navigate("/dashboard");
+      }
+    }
+  }, [user, isAdmin, loading, navigate]);
 
   const checkAdminRole = async (userId: string) => {
     try {
@@ -98,6 +112,66 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  const signInWithGoogle = async () => {
+    try {
+      const provider = new GoogleAuthProvider();
+      const result = await signInWithPopup(auth, provider);
+      const firebaseUser = result.user;
+
+      // Check if user profile exists
+      const profileDoc = await getDoc(doc(db, "profiles", firebaseUser.uid));
+      const isNewUser = !profileDoc.exists();
+
+      if (isNewUser) {
+        // For new users, we'll return the user data and let the component handle the next steps
+        return { error: null, user: firebaseUser, isNewUser: true };
+      } else {
+        // For existing users, return without navigating (navigation handled by useEffect)
+        return { error: null, user: firebaseUser, isNewUser: false };
+      }
+    } catch (error: any) {
+      return { error };
+    }
+  };
+
+  const signUpWithGoogle = async (metadata: any) => {
+    try {
+      const currentUser = auth.currentUser;
+      if (!currentUser) {
+        throw new Error("No authenticated user found");
+      }
+
+      await setDoc(
+        doc(db, "profiles", currentUser.uid),
+        {
+          name: currentUser.displayName || "",
+          email: currentUser.email || "",
+          phone: metadata?.phone || "",
+          department: metadata?.department || "",
+          gender: metadata?.gender || "",
+          password: metadata?.password || "", // Store password for future login
+          created_at: serverTimestamp(),
+          updated_at: serverTimestamp(),
+        },
+        { merge: true }
+      );
+
+      await setDoc(
+        doc(db, "user_roles", currentUser.uid),
+        {
+          roles: ["player"],
+          updated_at: serverTimestamp(),
+          created_at: serverTimestamp(),
+        },
+        { merge: true }
+      );
+
+      return { error: null };
+    } catch (error: any) {
+      return { error };
+    }
+  };
+
   const signOut = async () => {
     await firebaseSignOut(auth);
     setIsAdmin(false);
@@ -105,7 +179,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, isAdmin, signUp, signIn, signOut }}>
+    <AuthContext.Provider value={{ user, loading, isAdmin, signUp, signIn, signInWithGoogle, signUpWithGoogle, signOut }}>
       {children}
     </AuthContext.Provider>
   );
