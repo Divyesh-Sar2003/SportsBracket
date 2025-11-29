@@ -45,6 +45,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return () => unsubscribe();
   }, []);
 
+  useEffect(() => {
+    if (!loading && user) {
+      if (isAdmin) {
+        navigate("/admin");
+      } else {
+        navigate("/dashboard");
+      }
+    }
+  }, [user, isAdmin, loading, navigate]);
+
   const checkAdminRole = async (userId: string) => {
     try {
       const roleDoc = await getDoc(doc(db, "user_roles", userId));
@@ -116,8 +126,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         // For new users, we'll return the user data and let the component handle the next steps
         return { error: null, user: firebaseUser, isNewUser: true };
       } else {
-        // For existing users, navigate to home
-        navigate("/");
+        // For existing users, return without navigating (navigation handled by useEffect)
         return { error: null, user: firebaseUser, isNewUser: false };
       }
     } catch (error: any) {

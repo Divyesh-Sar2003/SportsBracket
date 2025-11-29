@@ -18,7 +18,7 @@ const Navbar = () => {
 
         {/* Desktop Navigation */}
         <div className="hidden md:flex items-center space-x-6">
-          <Link to="/games" className="text-sm font-medium text-foreground hover:text-primary transition-colors">
+          {/* <Link to="/games" className="text-sm font-medium text-foreground hover:text-primary transition-colors">
             Games
           </Link>
           <Link to="/schedule" className="text-sm font-medium text-foreground hover:text-primary transition-colors">
@@ -26,7 +26,7 @@ const Navbar = () => {
           </Link>
           <Link to="/results" className="text-sm font-medium text-foreground hover:text-primary transition-colors">
             Results
-          </Link>
+          </Link> */}
           <Link to="/leaderboard" className="text-sm font-medium text-foreground hover:text-primary transition-colors">
             Leaderboard
           </Link>
