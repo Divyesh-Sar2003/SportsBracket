@@ -18,7 +18,7 @@ export function AdminHeader() {
       </div>
       
       <div className="flex items-center gap-4">
-        <span className="text-sm text-muted-foreground">{user?.email}</span>
+        <span className="text-sm text-muted-foreground">{user?.displayName}</span>
         <Button variant="outline" size="sm" onClick={signOut}>
           <LogOut className="h-4 w-4 mr-2" />
           Logout

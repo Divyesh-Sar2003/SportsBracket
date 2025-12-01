@@ -45,15 +45,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return () => unsubscribe();
   }, []);
 
-  useEffect(() => {
-    if (!loading && user) {
-      if (isAdmin) {
-        navigate("/admin");
-      } else {
-        navigate("/dashboard");
-      }
-    }
-  }, [user, isAdmin, loading, navigate]);
+  // useEffect(() => {
+  //   if (!loading && user) {
+  //     if (isAdmin) {
+  //       navigate("/admin");
+  //     } else {
+  //       navigate("/dashboard");
+  //     }
+  //   }
+  // }, [user, isAdmin, loading, navigate]);
 
   const checkAdminRole = async (userId: string) => {
     try {
