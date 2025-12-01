@@ -1,7 +1,57 @@
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Trophy, Users, Calendar, Gamepad2 } from "lucide-react";
+import { fetchTournaments } from "@/services/firestore/tournaments";
+import { fetchGames } from "@/services/firestore/games";
+import { fetchUsers } from "@/services/firestore/users";
+import { fetchMatches } from "@/services/firestore/matches";
 
 const Overview = () => {
+  const [stats, setStats] = useState({
+    activeTournamentsCount: 0,
+    activeTournamentName: "Loading...",
+    totalGames: 0,
+    registeredPlayers: 0,
+    scheduledMatches: 0,
+  });
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const loadDashboardData = async () => {
+      try {
+        const [tournaments, users, games] = await Promise.all([
+          fetchTournaments(),
+          fetchUsers(),
+          fetchGames(),
+        ]);
+
+        const activeTournaments = tournaments.filter((t) => t.is_active);
+        const mainTournament = activeTournaments[0] || tournaments[0];
+
+        let matchesCount = 0;
+        if (mainTournament) {
+          const matches = await fetchMatches({ tournamentId: mainTournament.id });
+          matchesCount = matches.length;
+        }
+
+        setStats({
+          activeTournamentsCount: activeTournaments.length,
+          activeTournamentName: mainTournament ? mainTournament.name : "No Tournaments",
+          totalGames: games.length,
+          registeredPlayers: users.length,
+          scheduledMatches: matchesCount,
+        });
+      } catch (error) {
+        console.error("Error fetching dashboard data:", error);
+        setStats(prev => ({ ...prev, activeTournamentName: "Error loading data" }));
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadDashboardData();
+  }, []);
+
   return (
     <div className="space-y-6">
       <div>
@@ -16,8 +66,8 @@ const Overview = () => {
             <Trophy className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">1</div>
-            <p className="text-xs text-muted-foreground">Sports Week 2025</p>
+            <div className="text-2xl font-bold">{loading ? "-" : stats.activeTournamentsCount}</div>
+            <p className="text-xs text-muted-foreground">{stats.activeTournamentName}</p>
           </CardContent>
         </Card>
 
@@ -27,8 +77,8 @@ const Overview = () => {
             <Gamepad2 className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">0</div>
-            <p className="text-xs text-muted-foreground">Add games to get started</p>
+            <div className="text-2xl font-bold">{loading ? "-" : stats.totalGames}</div>
+            <p className="text-xs text-muted-foreground">Across all tournaments</p>
           </CardContent>
         </Card>
 
@@ -38,8 +88,8 @@ const Overview = () => {
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">0</div>
-            <p className="text-xs text-muted-foreground">Awaiting registrations</p>
+            <div className="text-2xl font-bold">{loading ? "-" : stats.registeredPlayers}</div>
+            <p className="text-xs text-muted-foreground">Total registered users</p>
           </CardContent>
         </Card>
 
@@ -49,8 +99,8 @@ const Overview = () => {
             <Calendar className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">0</div>
-            <p className="text-xs text-muted-foreground">No matches yet</p>
+            <div className="text-2xl font-bold">{loading ? "-" : stats.scheduledMatches}</div>
+            <p className="text-xs text-muted-foreground">For current tournament</p>
           </CardContent>
         </Card>
       </div>
