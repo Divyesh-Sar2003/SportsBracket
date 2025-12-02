@@ -1,0 +1,41 @@
+name: Build and Deploy (Vue → deployment branch)
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: |
+          npm ci
+
+      - name: Build Vue app
+        run: |
+          npm run build
+        # Vue CLI: dist/
+        # Vite: dist/ (default)
+
+      - name: Deploy dist to deployment branch
+        uses: JamesIves/github-pages-deploy-action@v4
+        with:
+          branch: deployment   # target branch
+          folder: dist         # Vue build output
+          clean: true
+          commit-message: "Deploy Vue app to deployment branch"
+          target-branch: deployment # specify the target branch again for clarity 
