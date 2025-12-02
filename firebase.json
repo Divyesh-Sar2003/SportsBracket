@@ -1,8 +1,0 @@
-{
-  "firestore": {
-    "database": "(default)",
-    "location": "nam5",
-    "rules": "y",
-    "indexes": "firestore.indexes.json"
-  }
-}
