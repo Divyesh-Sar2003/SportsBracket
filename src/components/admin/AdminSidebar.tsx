@@ -7,6 +7,7 @@ import {
   ClipboardCheck,
   Swords,
   BarChart3,
+  UserCheck,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
@@ -31,6 +32,7 @@ const menuItems = [
   { title: "Teams", url: "/admin/teams", icon: Swords },
   { title: "Matches", url: "/admin/matches", icon: Calendar },
   { title: "Leaderboard", url: "/admin/leaderboard", icon: BarChart3 },
+  { title: "Users", url: "/admin/users", icon: UserCheck },
 ];
 
 export function AdminSidebar() {
@@ -47,9 +49,9 @@ export function AdminSidebar() {
               {menuItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild>
-                    <NavLink 
+                    <NavLink
                       to={item.url}
-                      className="hover:bg-muted/50" 
+                      className="hover:bg-muted/50"
                       activeClassName="bg-muted text-primary font-medium"
                     >
                       <item.icon className="h-4 w-4" />
