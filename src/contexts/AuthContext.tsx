@@ -16,6 +16,7 @@ interface AuthContextType {
   user: User | null;
   loading: boolean;
   isAdmin: boolean;
+  isPlayer: boolean;
   signUp: (email: string, password: string, metadata: any) => Promise<{ error: any }>;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
   signInWithGoogle: () => Promise<{ error: any; user?: User; isNewUser?: boolean }>;
@@ -29,6 +30,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isPlayer, setIsPlayer] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -38,6 +40,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         await checkAdminRole(currentUser.uid);
       } else {
         setIsAdmin(false);
+        setIsPlayer(false);
       }
       setLoading(false);
     });
@@ -61,9 +64,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const roleData = roleDoc.exists() ? roleDoc.data() : null;
       const roles = (roleData?.roles as string[] | undefined) ?? [];
       setIsAdmin(roles.includes("admin"));
+      setIsPlayer(!roles.includes("admin"));
     } catch (error) {
       console.error("Error checking admin role:", error);
       setIsAdmin(false);
+      setIsPlayer(false);
     }
   };
 
@@ -123,7 +128,29 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const isNewUser = !profileDoc.exists();
 
       if (isNewUser) {
-        // For new users, we'll return the user data and let the component handle the next steps
+        // Create basic profile for new users
+        await setDoc(
+          doc(db, "profiles", firebaseUser.uid),
+          {
+            name: firebaseUser.displayName || "",
+            email: firebaseUser.email || "",
+            created_at: serverTimestamp(),
+            updated_at: serverTimestamp(),
+          },
+          { merge: true }
+        );
+
+        // Set user role as player
+        await setDoc(
+          doc(db, "user_roles", firebaseUser.uid),
+          {
+            roles: ["player"],
+            updated_at: serverTimestamp(),
+            created_at: serverTimestamp(),
+          },
+          { merge: true }
+        );
+
         return { error: null, user: firebaseUser, isNewUser: true };
       } else {
         // For existing users, return without navigating (navigation handled by useEffect)
@@ -179,7 +206,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, isAdmin, signUp, signIn, signInWithGoogle, signUpWithGoogle, signOut }}>
+    <AuthContext.Provider value={{ user, loading, isAdmin, isPlayer, signUp, signIn, signInWithGoogle, signUpWithGoogle, signOut }}>
       {children}
     </AuthContext.Provider>
   );

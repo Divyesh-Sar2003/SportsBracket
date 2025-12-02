@@ -5,7 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useState } from "react";
 
 const Navbar = () => {
-  const { user, signOut, isAdmin } = useAuth();
+  const { user, signOut, isAdmin, isPlayer } = useAuth();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   return (
@@ -30,6 +30,12 @@ const Navbar = () => {
           <Link to="/leaderboard" className="text-sm font-medium text-foreground hover:text-primary transition-colors">
             Leaderboard
           </Link>
+          {isPlayer && (
+            <Link to="/dashboard" className="text-sm font-medium text-foreground hover:text-primary transition-colors">
+              Player Dashboard
+            </Link>
+          )}
+
           {isAdmin && (
             <Link to="/admin" className="text-sm font-medium text-foreground hover:text-primary transition-colors">
               Admin
@@ -72,7 +78,7 @@ const Navbar = () => {
       {isMenuOpen && (
         <div className="md:hidden border-t border-border bg-background">
           <div className="container py-4 space-y-3">
-            <Link
+            {/* <Link
               to="/games"
               className="block py-2 text-sm font-medium text-foreground hover:text-primary transition-colors"
               onClick={() => setIsMenuOpen(false)}
@@ -92,7 +98,7 @@ const Navbar = () => {
               onClick={() => setIsMenuOpen(false)}
             >
               Results
-            </Link>
+            </Link> */}
             <Link
               to="/leaderboard"
               className="block py-2 text-sm font-medium text-foreground hover:text-primary transition-colors"
@@ -100,13 +106,43 @@ const Navbar = () => {
             >
               Leaderboard
             </Link>
+            {isPlayer && (
+              <Link
+                to="/dashboard"
+                className="block py-2 text-sm font-medium text-foreground hover:text-primary transition-colors"
+                onClick={() => setIsMenuOpen(false)}
+              >
+                Player Dashboard
+              </Link>
+            )}
+            {isAdmin && (
+              <Link
+                to="/admin"
+                className="block py-2 text-sm font-medium text-foreground hover:text-primary transition-colors"
+                onClick={() => setIsMenuOpen(false)}
+              >
+                Admin
+              </Link>
+            )}
             <div className="flex flex-col space-y-2 pt-2">
-              <Link to="/login" onClick={() => setIsMenuOpen(false)}>
-                <Button variant="ghost" className="w-full">Login</Button>
-              </Link>
-              <Link to="/register" onClick={() => setIsMenuOpen(false)}>
-                <Button className="w-full">Register</Button>
-              </Link>
+              {user ? (
+                <>
+                  <span className="text-sm text-muted-foreground">{user.email}</span>
+                  <Button variant="ghost" onClick={signOut} className="w-full">
+                    <LogOut className="h-4 w-4 mr-2" />
+                    Logout
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Link to="/login" onClick={() => setIsMenuOpen(false)}>
+                    <Button variant="ghost" className="w-full">Login</Button>
+                  </Link>
+                  <Link to="/register" onClick={() => setIsMenuOpen(false)}>
+                    <Button className="w-full">Register</Button>
+                  </Link>
+                </>
+              )}
             </div>
           </div>
         </div>
