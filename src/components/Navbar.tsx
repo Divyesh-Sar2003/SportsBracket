@@ -46,7 +46,7 @@ const Navbar = () => {
         <div className="hidden md:flex items-center space-x-3">
           {user ? (
             <>
-              <span className="text-sm text-muted-foreground">{user.email}</span>
+              <span className="text-sm text-muted-foreground">{user.displayName}</span>
               <Button variant="ghost" onClick={signOut}>
                 <LogOut className="h-4 w-4 mr-2" />
                 Logout

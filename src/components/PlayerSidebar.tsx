@@ -49,7 +49,7 @@ export function PlayerSidebar() {
   const location = useLocation();
 
   return (
-    <Sidebar>
+    <Sidebar collapsible="icon">
       <SidebarContent>
         <SidebarGroup>
           <SidebarGroupLabel>Player Panel</SidebarGroupLabel>
@@ -60,6 +60,7 @@ export function PlayerSidebar() {
                   <SidebarMenuButton
                     asChild
                     isActive={location.pathname === item.url}
+                    tooltip={item.title}
                   >
                     <Link to={item.url}>
                       <item.icon className="h-4 w-4" />
