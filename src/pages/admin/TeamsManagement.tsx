@@ -12,6 +12,7 @@ import { fetchTeams, createTeam, updateTeam, deleteTeam, addPlayerToTeam } from 
 import { fetchGames } from "@/services/firestore/games";
 import { fetchTournaments } from "@/services/firestore/tournaments";
 import { fetchUsers, User } from "@/services/firestore/users";
+import { addParticipant } from "@/services/firestore/participants";
 import { Team, Tournament, Game } from "@/types/tournament";
 import { updateDoc, doc, arrayRemove, serverTimestamp } from "firebase/firestore";
 import { db } from "@/integrations/firebase/client";
@@ -222,13 +223,21 @@ const TeamsManagement = () => {
     if (selectedPairPlayers.length !== 2) return;
 
     try {
-      await createTeam({
+      const teamId = await createTeam({
         tournament_id: selectedTournamentId,
         game_id: selectedGameId,
         name: `Pair ${Date.now()}`,
         is_pair: true,
         player_ids: selectedPairPlayers,
         status: "pending"
+      });
+
+      // Create participant for the pair
+      await addParticipant({
+        tournament_id: selectedTournamentId,
+        game_id: selectedGameId,
+        type: "TEAM",
+        team_id: teamId,
       });
 
       toast({ title: "Pair created successfully" });

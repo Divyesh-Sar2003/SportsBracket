@@ -29,7 +29,7 @@ const App = () => (
             <Route path="/schedule" element={<SchedulePage />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
-            <Route path="/dashboard" element={<PlayerDashboard />} />
+            <Route path="/dashboard/*" element={<PlayerDashboard />} />
             {/* <Route path="/admin/*" element={<AdminDashboard.Overview />} /> */}
             <Route path="/admin/*" element={<AdminDashboard />} />
 

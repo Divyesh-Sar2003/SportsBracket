@@ -36,11 +36,10 @@ const menuItems = [
 ];
 
 export function AdminSidebar() {
-  const { open } = useSidebar();
   const location = useLocation();
 
   return (
-    <Sidebar className={open ? "w-60" : "w-14"} collapsible="icon">
+    <Sidebar collapsible="icon">
       <SidebarContent>
         <SidebarGroup>
           <SidebarGroupLabel>Admin Panel</SidebarGroupLabel>
@@ -48,14 +47,18 @@ export function AdminSidebar() {
             <SidebarMenu>
               {menuItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={location.pathname === item.url}
+                    tooltip={item.title}
+                  >
                     <NavLink
                       to={item.url}
                       className="hover:bg-muted/50"
                       activeClassName="bg-muted text-primary font-medium"
                     >
                       <item.icon className="h-4 w-4" />
-                      {open && <span>{item.title}</span>}
+                      <span>{item.title}</span>
                     </NavLink>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
