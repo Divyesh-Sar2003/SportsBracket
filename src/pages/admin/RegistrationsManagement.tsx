@@ -14,14 +14,17 @@ import { fetchUsers, User } from "@/services/firestore/users";
 import { Registration, RegistrationStatus } from "@/types/tournament";
 import { Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { addParticipantToNotifications } from "@/utils/notifications";
+import {
+  sendGameRegistrationApprovalNotification,
+  sendGameRegistrationRejectionNotification
+} from "@/utils/notifications";
 
 const statusVariant: Record<RegistrationStatus, "default" | "secondary" | "destructive" | "outline"> =
-  {
-    pending: "secondary",
-    approved: "default",
-    rejected: "destructive",
-  };
+{
+  pending: "secondary",
+  approved: "default",
+  rejected: "destructive",
+};
 
 const RegistrationsManagement = () => {
   const [tournamentId, setTournamentId] = useState<string>("");
@@ -78,6 +81,10 @@ const RegistrationsManagement = () => {
     try {
       await updateRegistrationStatus(registration.id, decision);
 
+      // Find the game name for the notification
+      const game = games.find(g => g.id === registration.game_id);
+      const gameName = game?.name || "Unknown Game";
+
       if (decision === "approved") {
         const participantId = await addParticipant({
           tournament_id: registration.tournament_id,
@@ -86,16 +93,22 @@ const RegistrationsManagement = () => {
           user_id: registration.user_id,
         });
 
-        await addParticipantToNotifications(registration.user_id, {
+        await sendGameRegistrationApprovalNotification(registration.user_id, {
           tournamentName: selectedTournament?.name || "Tournament",
+          gameName: gameName,
         });
 
         console.debug("Participant created:", participantId);
+      } else if (decision === "rejected") {
+        await sendGameRegistrationRejectionNotification(registration.user_id, {
+          tournamentName: selectedTournament?.name || "Tournament",
+          gameName: gameName,
+        });
       }
 
       toast({
         title: `Registration ${decision}`,
-        description: decision === "approved" ? "Player added to participants list." : undefined,
+        description: decision === "approved" ? "Player added to participants list." : "Player notified of rejection.",
       });
       const refreshed = await fetchRegistrations({
         tournamentId: registration.tournament_id,

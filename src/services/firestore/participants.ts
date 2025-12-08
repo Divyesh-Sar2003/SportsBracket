@@ -21,7 +21,6 @@ export const fetchParticipants = async (options: {
 }) => {
   const constraints = [
     where("tournament_id", "==", options.tournamentId),
-    orderBy("seed", "asc"),
     orderBy("created_at", "asc"),
   ];
 

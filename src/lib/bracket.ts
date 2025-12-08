@@ -41,7 +41,7 @@ export const generateSingleEliminationBracket = (
   const totalRounds = Math.log2(bracketSize);
   const matches: GeneratedMatch[] = [];
 
-  const participantSlots = Array(bracketSize).fill<Participant | null>(null);
+  const participantSlots = new Array<Participant | null>(bracketSize).fill(null);
   sorted.forEach((participant, index) => {
     participantSlots[index] = participant;
   });
@@ -59,14 +59,25 @@ export const generateSingleEliminationBracket = (
         round_index: roundIndex,
         round_name: roundName(roundIndex, totalRounds - 1),
         match_order: i,
-        participant_a_id: participantSlots[slotIndex]?.id,
-        participant_b_id: participantSlots[slotIndex + 1]?.id,
+        participant_a_id: roundIndex === 0 ? participantSlots[slotIndex]?.id : undefined,
+        participant_b_id: roundIndex === 0 ? participantSlots[slotIndex + 1]?.id : undefined,
       };
 
       if (previousRoundMatchIds.length) {
-        const sourceIndex = Math.floor(i / 2);
-        match.next_match_id = previousRoundMatchIds[sourceIndex];
-        match.winner_slot_in_next = i % 2 === 0 ? "A" : "B";
+        const prevMatchAId = previousRoundMatchIds[i * 2];
+        const prevMatchBId = previousRoundMatchIds[i * 2 + 1];
+
+        const prevMatchA = matches.find((m) => m.id === prevMatchAId);
+        if (prevMatchA) {
+          prevMatchA.next_match_id = matchId;
+          prevMatchA.winner_slot_in_next = "A";
+        }
+
+        const prevMatchB = matches.find((m) => m.id === prevMatchBId);
+        if (prevMatchB) {
+          prevMatchB.next_match_id = matchId;
+          prevMatchB.winner_slot_in_next = "B";
+        }
       }
 
       matches.push(match);

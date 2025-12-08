@@ -7,6 +7,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Trophy, Calendar, Users, Target } from "lucide-react";
 import ProfileManagement from "./player/ProfileManagement";
+import GameRegistration from "./player/GameRegistration";
+import MyGames from "./player/MyGames";
+import Notifications from "./player/Notifications";
 import { useState, useEffect } from "react";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "@/integrations/firebase/client";
@@ -142,6 +145,9 @@ const PlayerDashboard = () => {
                   </div>
                 </>
               } />
+              <Route path="register" element={<GameRegistration />} />
+              <Route path="my-games" element={<MyGames />} />
+              <Route path="notifications" element={<Notifications />} />
               <Route path="profile" element={<ProfileManagement />} />
             </Routes>
           </main>

@@ -15,6 +15,9 @@ import {
   Target,
   User,
   Home,
+  Bell,
+  Gamepad2,
+  ListChecks,
 } from "lucide-react";
 
 const menuItems = [
@@ -22,6 +25,21 @@ const menuItems = [
     title: "Dashboard",
     url: "/dashboard",
     icon: Home,
+  },
+  {
+    title: "Register for Games",
+    url: "/dashboard/register",
+    icon: Gamepad2,
+  },
+  {
+    title: "My Games",
+    url: "/dashboard/my-games",
+    icon: ListChecks,
+  },
+  {
+    title: "Notifications",
+    url: "/dashboard/notifications",
+    icon: Bell,
   },
   {
     title: "My Tournaments",
