@@ -11,6 +11,7 @@ import Overview from "./Overview";
 import RegistrationsManagement from "./RegistrationsManagement";
 import ParticipantsManagement from "./ParticipantsManagement";
 import LeaderboardManagement from "./LeaderboardManagement";
+import UsersManagement from "./UsersManagement";
 
 const AdminDashboard = () => {
   const { loading, isAdmin } = useAuth();
@@ -31,10 +32,10 @@ const AdminDashboard = () => {
     <SidebarProvider>
       <div className="min-h-screen flex w-full bg-muted/30">
         <AdminSidebar />
-        
+
         <div className="flex-1 flex flex-col">
           <AdminHeader />
-          
+
           <main className="flex-1 p-6">
             <Routes>
               <Route path="/" element={<Overview />} />
@@ -45,6 +46,7 @@ const AdminDashboard = () => {
               <Route path="/teams" element={<TeamsManagement />} />
               <Route path="/matches" element={<MatchesManagement />} />
               <Route path="/leaderboard" element={<LeaderboardManagement />} />
+              <Route path="/users" element={<UsersManagement />} />
             </Routes>
           </main>
         </div>

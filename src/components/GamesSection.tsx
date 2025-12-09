@@ -48,20 +48,26 @@ const GamesSection = () => {
   ];
 
   return (
-    <section className="py-16 md:py-24 bg-muted/30">
-      <div className="container">
-        <div className="text-center mb-12">
-          <h2 className="text-3xl font-bold tracking-tight text-foreground md:text-4xl mb-4">
-            Tournament Games
+    <section className="py-12 md:py-20 lg:py-24 bg-gradient-to-b from-muted/30 to-background">
+      <div className="container px-4 md:px-6">
+        <div className="text-center mb-10 md:mb-16 animate-fade-in">
+          <h2 className="text-3xl sm:text-4xl md:text-5xl font-black tracking-tight mb-4 md:mb-6">
+            <span className="gradient-text">Tournament Games</span>
           </h2>
-          <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+          <p className="text-base md:text-lg lg:text-xl text-muted-foreground max-w-3xl mx-auto leading-relaxed px-4 md:px-0">
             Compete in 7 exciting sports across different formats - singles, doubles, and team events
           </p>
         </div>
-        
-        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {games.map((game) => (
-            <GameCard key={game.name} {...game} />
+
+        <div className="grid gap-4 md:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          {games.map((game, index) => (
+            <div
+              key={game.name}
+              className="animate-slide-up"
+              style={{ animationDelay: `${index * 0.1}s` }}
+            >
+              <GameCard {...game} />
+            </div>
           ))}
         </div>
       </div>
