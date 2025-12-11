@@ -8,7 +8,7 @@ export function AdminHeader() {
   const { signOut, user } = useAuth();
 
   return (
-    <header className="h-16 border-b bg-card flex items-center justify-between px-6">
+    <header className="sticky top-0 z-50 h-16 border-b bg-card flex items-center justify-between px-6">
       <div className="flex items-center gap-4">
         <SidebarTrigger />
         <Link to="/admin" className="flex items-center gap-2">
@@ -16,7 +16,7 @@ export function AdminHeader() {
           <span className="text-lg font-bold">Admin Dashboard</span>
         </Link>
       </div>
-      
+
       <div className="flex items-center gap-4">
         <span className="text-sm text-muted-foreground">{user?.displayName}</span>
         <Button variant="outline" size="sm" onClick={signOut}>

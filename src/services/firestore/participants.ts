@@ -33,6 +33,12 @@ export const fetchParticipants = async (options: {
   return snapshot.docs.map((docSnap) => ({ id: docSnap.id, ...(docSnap.data() as Participant) }));
 };
 
+export const fetchUserParticipants = async (userId: string) => {
+  const q = query(participantsCollection, where("user_id", "==", userId));
+  const snapshot = await getDocs(q);
+  return snapshot.docs.map((docSnap) => ({ id: docSnap.id, ...(docSnap.data() as Participant) }));
+};
+
 export const addParticipant = async (
   participant: Omit<Participant, "id" | "created_at" | "updated_at">
 ) => {

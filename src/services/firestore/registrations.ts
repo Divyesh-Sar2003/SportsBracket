@@ -18,6 +18,7 @@ export const fetchRegistrations = async (options: {
   tournamentId?: string;
   gameId?: string;
   status?: RegistrationStatus;
+  userId?: string;
 }) => {
   const conditions = [];
   if (options.tournamentId) {
@@ -28,6 +29,9 @@ export const fetchRegistrations = async (options: {
   }
   if (options.status) {
     conditions.push(where("status", "==", options.status));
+  }
+  if (options.userId) {
+    conditions.push(where("user_id", "==", options.userId));
   }
 
   const registrationsQuery = query(
