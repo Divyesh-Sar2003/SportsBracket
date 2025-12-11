@@ -49,31 +49,31 @@ const Hero = () => {
 
         {/* Feature Cards - Enhanced with Glassmorphism */}
         <div className="mt-12 md:mt-20 grid gap-4 md:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 px-4 md:px-0">
-          <div className="group glass-card rounded-2xl p-6 md:p-8 border border-white/20 hover:border-white/40 transition-all hover:scale-105 hover:-translate-y-2 animate-slide-up">
+          <div className="group rounded-2xl p-6 md:p-8 bg-white/15 backdrop-blur-md border border-white/30 hover:border-white/50 hover:bg-white/20 transition-all hover:scale-105 hover:-translate-y-2 animate-slide-up shadow-xl">
             <div className="relative inline-block mb-4 md:mb-6">
-              <Trophy className="h-10 w-10 md:h-12 md:w-12 text-accent group-hover:rotate-12 transition-transform" />
-              <div className="absolute inset-0 blur-xl bg-accent/30 group-hover:bg-accent/50 transition-all" />
+              <Trophy className="h-10 w-10 md:h-12 md:w-12 text-white drop-shadow-lg group-hover:rotate-12 transition-transform" />
+              <div className="absolute inset-0 blur-xl bg-accent/40 group-hover:bg-accent/60 transition-all" />
             </div>
-            <h3 className="mb-2 md:mb-3 text-lg md:text-xl font-bold text-white">7 Sports</h3>
-            <p className="text-sm md:text-base text-white/85 leading-relaxed">Cricket, Volleyball, Chess, Table Tennis, Carrom, Pool, Pickleball</p>
+            <h3 className="mb-2 md:mb-3 text-lg md:text-xl font-bold text-white drop-shadow-md">7 Sports</h3>
+            <p className="text-sm md:text-base text-white drop-shadow-sm leading-relaxed">Cricket, Volleyball, Chess, Table Tennis, Carrom, Pool, Pickleball</p>
           </div>
 
-          <div className="group glass-card rounded-2xl p-6 md:p-8 border border-white/20 hover:border-white/40 transition-all hover:scale-105 hover:-translate-y-2 animate-slide-up" style={{ animationDelay: '0.1s' }}>
+          <div className="group rounded-2xl p-6 md:p-8 bg-white/15 backdrop-blur-md border border-white/30 hover:border-white/50 hover:bg-white/20 transition-all hover:scale-105 hover:-translate-y-2 animate-slide-up shadow-xl" style={{ animationDelay: '0.1s' }}>
             <div className="relative inline-block mb-4 md:mb-6">
-              <Users className="h-10 w-10 md:h-12 md:w-12 text-warning group-hover:scale-110 transition-transform" />
-              <div className="absolute inset-0 blur-xl bg-warning/30 group-hover:bg-warning/50 transition-all" />
+              <Users className="h-10 w-10 md:h-12 md:w-12 text-white drop-shadow-lg group-hover:scale-110 transition-transform" />
+              <div className="absolute inset-0 blur-xl bg-warning/40 group-hover:bg-warning/60 transition-all" />
             </div>
-            <h3 className="mb-2 md:mb-3 text-lg md:text-xl font-bold text-white">Team Management</h3>
-            <p className="text-sm md:text-base text-white/85 leading-relaxed">Create teams, pairs, and track individual players seamlessly</p>
+            <h3 className="mb-2 md:mb-3 text-lg md:text-xl font-bold text-white drop-shadow-md">Team Management</h3>
+            <p className="text-sm md:text-base text-white drop-shadow-sm leading-relaxed">Create teams, pairs, and track individual players seamlessly</p>
           </div>
 
-          <div className="group glass-card rounded-2xl p-6 md:p-8 border border-white/20 hover:border-white/40 transition-all hover:scale-105 hover:-translate-y-2 sm:col-span-2 lg:col-span-1 animate-slide-up" style={{ animationDelay: '0.2s' }}>
+          <div className="group rounded-2xl p-6 md:p-8 bg-white/15 backdrop-blur-md border border-white/30 hover:border-white/50 hover:bg-white/20 transition-all hover:scale-105 hover:-translate-y-2 sm:col-span-2 lg:col-span-1 animate-slide-up shadow-xl" style={{ animationDelay: '0.2s' }}>
             <div className="relative inline-block mb-4 md:mb-6">
-              <Calendar className="h-10 w-10 md:h-12 md:w-12 text-info group-hover:rotate-6 transition-transform" />
-              <div className="absolute inset-0 blur-xl bg-info/30 group-hover:bg-info/50 transition-all" />
+              <Calendar className="h-10 w-10 md:h-12 md:w-12 text-white drop-shadow-lg group-hover:rotate-6 transition-transform" />
+              <div className="absolute inset-0 blur-xl bg-info/40 group-hover:bg-info/60 transition-all" />
             </div>
-            <h3 className="mb-2 md:mb-3 text-lg md:text-xl font-bold text-white">Live Brackets</h3>
-            <p className="text-sm md:text-base text-white/85 leading-relaxed">Real-time tournament brackets with instant result updates</p>
+            <h3 className="mb-2 md:mb-3 text-lg md:text-xl font-bold text-white drop-shadow-md">Live Brackets</h3>
+            <p className="text-sm md:text-base text-white drop-shadow-sm leading-relaxed">Real-time tournament brackets with instant result updates</p>
           </div>
         </div>
       </div>

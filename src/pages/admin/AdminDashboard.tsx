@@ -1,4 +1,5 @@
 import { Navigate, Routes, Route } from "react-router-dom";
+import { useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { AdminSidebar } from "@/components/admin/AdminSidebar";
@@ -15,6 +16,17 @@ import UsersManagement from "./UsersManagement";
 
 const AdminDashboard = () => {
   const { loading, isAdmin } = useAuth();
+
+  // Remove body padding-top for dashboard layout
+  useEffect(() => {
+    const body = document.body;
+    const originalPaddingTop = body.style.paddingTop;
+    body.style.paddingTop = '0';
+
+    return () => {
+      body.style.paddingTop = originalPaddingTop;
+    };
+  }, []);
 
   if (loading) {
     return (

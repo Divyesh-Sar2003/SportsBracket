@@ -7,6 +7,7 @@ import {
   signOut as firebaseSignOut,
   signInWithPopup,
   GoogleAuthProvider,
+  sendEmailVerification,
 } from "firebase/auth";
 import { doc, getDoc, serverTimestamp, setDoc } from "firebase/firestore";
 import { useNavigate } from "react-router-dom";
@@ -101,6 +102,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         { merge: true }
       );
 
+      await sendEmailVerification(firebaseUser);
+      await firebaseSignOut(auth);
+
       return { error: null };
     } catch (error: any) {
       return { error };
@@ -109,7 +113,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const signIn = async (email: string, password: string) => {
     try {
-      await signInWithEmailAndPassword(auth, email, password);
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+
+      if (!userCredential.user.emailVerified) {
+        await firebaseSignOut(auth);
+        throw new Error("Please verify your email address before logging in.");
+      }
+
       navigate("/");
       return { error: null };
     } catch (error: any) {
