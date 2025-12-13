@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { Trophy } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
@@ -12,6 +12,7 @@ import { User } from "firebase/auth";
 import { Separator } from "@/components/ui/separator";
 
 const Register = () => {
+  const location = useLocation();
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -21,11 +22,24 @@ const Register = () => {
     password: ""
   });
   const [loading, setLoading] = useState(false);
-  const [step, setStep] = useState(1);
+  const [step, setStep] = useState(location.state?.isNewUser ? 2 : 1);
   const [googleUser, setGoogleUser] = useState<User | null>(null);
   const { signUp, signInWithGoogle, signUpWithGoogle, user } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (location.state?.isNewUser && user) {
+      setGoogleUser(user);
+      toast({
+        title: "Profile Update Required",
+        description: "Please update your profile details to complete registration.",
+      });
+      // Clear state so refresh doesn't trigger it again? 
+      // Actually navigate replaces history but checks are fine.
+      window.history.replaceState({}, document.title);
+    }
+  }, [location.state, user]);
 
   useEffect(() => {
     // Only redirect if user is logged in AND we are not in the middle of Google registration (step 2) 
@@ -86,6 +100,10 @@ const Register = () => {
         });
       } else if (googleUserData && isNewUser) {
         setGoogleUser(googleUserData);
+        toast({
+          title: "Profile Update Required",
+          description: "Please update your profile details to complete registration.",
+        });
         setStep(2);
       } else if (googleUserData && !isNewUser) {
         // User already exists, redirect to home

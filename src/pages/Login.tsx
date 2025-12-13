@@ -60,7 +60,7 @@ const Login = () => {
   const handleGoogleSignIn = async () => {
     setLoading(true);
     try {
-      const { error } = await signInWithGoogle();
+      const { error, isNewUser } = await signInWithGoogle();
 
       if (error) {
         toast({
@@ -68,6 +68,8 @@ const Login = () => {
           description: error.message,
           variant: "destructive"
         });
+      } else if (isNewUser) {
+        navigate('/register', { state: { isNewUser: true } });
       }
     } catch (error: any) {
       toast({
