@@ -74,42 +74,54 @@ const RegistrationsManagement = () => {
     [tournaments, tournamentId]
   );
 
+  const processRegistrationDecision = async (
+    registration: Registration,
+    decision: Extract<RegistrationStatus, "approved" | "rejected">
+  ) => {
+    // Update status in Firestore
+    await updateRegistrationStatus(registration.id, decision);
+
+    // Find the game name for the notification
+    const game = games.find((g) => g.id === registration.game_id);
+    const gameName = game?.name || "Unknown Game";
+
+    if (decision === "approved") {
+      await addParticipant({
+        tournament_id: registration.tournament_id,
+        game_id: registration.game_id,
+        type: "USER",
+        user_id: registration.user_id,
+      });
+
+      await sendGameRegistrationApprovalNotification(registration.user_id, {
+        tournamentName: selectedTournament?.name || "Tournament",
+        gameName: gameName,
+      });
+
+      console.debug("Participant created/Approved notification sent");
+    } else if (decision === "rejected") {
+      await sendGameRegistrationRejectionNotification(registration.user_id, {
+        tournamentName: selectedTournament?.name || "Tournament",
+        gameName: gameName,
+      });
+    }
+  };
+
   const handleDecision = async (
     registration: Registration,
     decision: Extract<RegistrationStatus, "approved" | "rejected">
   ) => {
     try {
-      await updateRegistrationStatus(registration.id, decision);
-
-      // Find the game name for the notification
-      const game = games.find(g => g.id === registration.game_id);
-      const gameName = game?.name || "Unknown Game";
-
-      if (decision === "approved") {
-        const participantId = await addParticipant({
-          tournament_id: registration.tournament_id,
-          game_id: registration.game_id,
-          type: "USER",
-          user_id: registration.user_id,
-        });
-
-        await sendGameRegistrationApprovalNotification(registration.user_id, {
-          tournamentName: selectedTournament?.name || "Tournament",
-          gameName: gameName,
-        });
-
-        console.debug("Participant created:", participantId);
-      } else if (decision === "rejected") {
-        await sendGameRegistrationRejectionNotification(registration.user_id, {
-          tournamentName: selectedTournament?.name || "Tournament",
-          gameName: gameName,
-        });
-      }
+      await processRegistrationDecision(registration, decision);
 
       toast({
         title: `Registration ${decision}`,
-        description: decision === "approved" ? "Player added to participants list." : "Player notified of rejection.",
+        description:
+          decision === "approved"
+            ? "Player added to participants list."
+            : "Player notified of rejection.",
       });
+
       const refreshed = await fetchRegistrations({
         tournamentId: registration.tournament_id,
         gameId: gameId || undefined,
@@ -121,6 +133,49 @@ const RegistrationsManagement = () => {
         description: error.message,
         variant: "destructive",
       });
+    }
+  };
+
+  const handleApproveAll = async () => {
+    const pendingRegistrations = registrations.filter(
+      (r) => r.status === "pending"
+    );
+
+    if (pendingRegistrations.length === 0) {
+      toast({
+        title: "No pending registrations",
+        description: "There are no pending requests to approve.",
+      });
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await Promise.all(
+        pendingRegistrations.map((registration) =>
+          processRegistrationDecision(registration, "approved")
+        )
+      );
+
+      toast({
+        title: "Batch Approval Successful",
+        description: `Approved ${pendingRegistrations.length} registrations.`,
+      });
+
+      // Refresh filtered list
+      const refreshed = await fetchRegistrations({
+        tournamentId: tournamentId,
+        gameId: gameId || undefined,
+      });
+      setRegistrations(refreshed);
+    } catch (error: any) {
+      toast({
+        title: "Batch Action failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -161,6 +216,16 @@ const RegistrationsManagement = () => {
         </div>
       </div>
 
+      <div className="flex justify-end">
+        <Button
+          onClick={handleApproveAll}
+          disabled={loading || !tournamentId || registrations.filter(r => r.status === "pending").length === 0}
+        >
+          {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+          Approve All showing requests
+        </Button>
+      </div>
+
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <div>
@@ -177,43 +242,76 @@ const RegistrationsManagement = () => {
           ) : registrations.length === 0 ? (
             <p className="text-muted-foreground text-sm">No registrations found.</p>
           ) : (
-            <div className="space-y-4">
-              {registrations.map((registration) => (
-                <div
-                  key={registration.id}
-                  className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between border-b pb-4 last:border-0"
-                >
-                  <div>
-                    <p className="font-medium">
-                      {users.find((user) => user.id === registration.user_id)?.name ?? registration.user_id}
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      {users.find((user) => user.id === registration.user_id)?.email ?? ""}
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      Game: {games.find((game) => game.id === registration.game_id)?.name ?? "Unknown"}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <Badge variant={statusVariant[registration.status]}>{registration.status}</Badge>
-                    {registration.status === "pending" && (
-                      <>
-                        <Button variant="outline" size="sm" onClick={() => handleDecision(registration, "approved")}>
-                          Approve
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="text-destructive"
-                          onClick={() => handleDecision(registration, "rejected")}
+            <div className="border rounded-lg overflow-hidden">
+              <div className="max-h-[600px] overflow-y-auto overflow-x-auto">
+                <table className="w-full">
+                  <thead className="sticky top-0 bg-background z-10">
+                    <tr className="border-b bg-muted/50">
+                      <th className="text-left py-3 px-4 font-semibold text-sm">User</th>
+                      <th className="text-left py-3 px-4 font-semibold text-sm">Email</th>
+                      <th className="text-left py-3 px-4 font-semibold text-sm">Game</th>
+                      <th className="text-left py-3 px-4 font-semibold text-sm">Status</th>
+                      <th className="text-left py-3 px-4 font-semibold text-sm">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {registrations.map((registration) => {
+                      const user = users.find((user) => user.id === registration.user_id);
+                      const game = games.find((game) => game.id === registration.game_id);
+                      return (
+                        <tr
+                          key={registration.id}
+                          className="border-b hover:bg-muted/50 transition-colors"
                         >
-                          Reject
-                        </Button>
-                      </>
-                    )}
-                  </div>
-                </div>
-              ))}
+                          <td className="py-3 px-4">
+                            <p className="font-medium">
+                              {user?.name ?? registration.user_id}
+                            </p>
+                          </td>
+                          <td className="py-3 px-4 text-sm text-muted-foreground">
+                            {user?.email ?? ""}
+                          </td>
+                          <td className="py-3 px-4 text-sm">
+                            {game?.name ?? "Unknown"}
+                          </td>
+                          <td className="py-3 px-4">
+                            <Badge variant={statusVariant[registration.status]}>
+                              {registration.status}
+                            </Badge>
+                          </td>
+                          <td className="py-3 px-4">
+                            <div className="flex items-center gap-2">
+                              {registration.status === "pending" && (
+                                <>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() =>
+                                      handleDecision(registration, "approved")
+                                    }
+                                  >
+                                    Approve
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="text-destructive"
+                                    onClick={() =>
+                                      handleDecision(registration, "rejected")
+                                    }
+                                  >
+                                    Reject
+                                  </Button>
+                                </>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
             </div>
           )}
         </CardContent>
