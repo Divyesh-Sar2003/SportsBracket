@@ -1,0 +1,1 @@
+{"name":"SportsBracket","short_name":"SportsBracket","description":"Sports Management System","start_url":"/SportsBracket/","display":"standalone","background_color":"#ffffff","theme_color":"#ffffff","lang":"en","scope":"/SportsBracket/","icons":[{"src":"pwa-192x192.png","sizes":"192x192","type":"image/png"},{"src":"pwa-512x512.png","sizes":"512x512","type":"image/png"}]}
