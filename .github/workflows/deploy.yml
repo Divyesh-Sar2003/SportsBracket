@@ -3,7 +3,7 @@ name: Build and Deploy
 on:
   push:
     branches:
-      - working
+      - working_branch
 
 jobs:
   build-and-deploy:
@@ -16,7 +16,7 @@ jobs:
       - name: Checkout working branch
         uses: actions/checkout@v4
         with:
-          ref: working
+          ref: working_branch
 
       - name: Install Node.js
         uses: actions/setup-node@v4
