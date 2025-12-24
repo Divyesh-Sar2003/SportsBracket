@@ -12,6 +12,7 @@ import Overview from "./Overview";
 import RegistrationsManagement from "./RegistrationsManagement";
 import ParticipantsManagement from "./ParticipantsManagement";
 import LeaderboardManagement from "./LeaderboardManagement";
+import MatchesSchedule from "./MatchesSchedule";
 import UsersManagement from "./UsersManagement";
 
 const AdminDashboard = () => {

@@ -251,10 +251,23 @@ const MatchesManagement = () => {
                           <div className="grid grid-cols-2 gap-2">
                             <Input
                               type="datetime-local"
-                              value={match.match_time || ""}
+                              value={(() => {
+                                if (!match.match_time) return "";
+                                let date: Date;
+                                if ((match.match_time as any)?.toDate) {
+                                  date = (match.match_time as any).toDate();
+                                } else if (match.match_time instanceof Date) {
+                                  date = match.match_time;
+                                } else {
+                                  date = new Date(match.match_time as string);
+                                }
+                                if (isNaN(date.getTime())) return "";
+                                // Format for datetime-local: YYYY-MM-DDThh:mm
+                                return new Date(date.getTime() - (date.getTimezoneOffset() * 60000)).toISOString().slice(0, 16);
+                              })()}
                               onChange={(event) =>
                                 updateMatch(match.id, {
-                                  match_time: event.target.value,
+                                  match_time: new Date(event.target.value).toISOString(),
                                 })
                               }
                             />

@@ -10,6 +10,7 @@ import ProfileManagement from "./player/ProfileManagement";
 import GameRegistration from "./player/GameRegistration";
 import MyGames from "./player/MyGames";
 import Notifications from "./player/Notifications";
+import PlayerSchedule from "./player/PlayerSchedule";
 import { useState, useEffect } from "react";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "@/integrations/firebase/client";
@@ -269,6 +270,8 @@ const PlayerDashboard = () => {
               } />
               <Route path="register" element={<GameRegistration />} />
               <Route path="my-games" element={<MyGames />} />
+              <Route path="matches" element={<PlayerSchedule />} />
+              <Route path="schedule" element={<PlayerSchedule />} />
               <Route path="notifications" element={<Notifications />} />
               <Route path="profile" element={<ProfileManagement />} />
             </Routes>

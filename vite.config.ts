@@ -40,6 +40,11 @@ export default defineConfig(({ mode }) => ({
       },
       devOptions: {
         enabled: true
+      },
+      workbox: {
+        navigateFallback: '/SportsBracket/index.html',
+        navigateFallbackDenylist: [/^\/api/],
+        globPatterns: ['**/*.{js,css,html,ico,png,svg}']
       }
     })
   ].filter(Boolean),

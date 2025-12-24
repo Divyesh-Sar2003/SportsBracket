@@ -1,4 +1,4 @@
- import { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,7 +13,9 @@ import { fetchGames } from "@/services/firestore/games";
 import { fetchTournaments } from "@/services/firestore/tournaments";
 import { fetchUsers, User } from "@/services/firestore/users";
 import { addParticipant } from "@/services/firestore/participants";
-import { Team, Tournament, Game } from "@/types/tournament";
+import { Team, Tournament, Game, Registration } from "@/types/tournament";
+import { fetchRegistrations } from "@/services/firestore/registrations";
+import { createNotification } from "@/services/firestore/notifications";
 import { updateDoc, doc, arrayRemove, serverTimestamp } from "firebase/firestore";
 import { db } from "@/integrations/firebase/client";
 
@@ -22,6 +24,7 @@ const TeamsManagement = () => {
   const [tournaments, setTournaments] = useState<Tournament[]>([]);
   const [games, setGames] = useState<Game[]>([]);
   const [users, setUsers] = useState<User[]>([]);
+  const [registrations, setRegistrations] = useState<Registration[]>([]);
   const [selectedTournamentId, setSelectedTournamentId] = useState<string>("");
   const [selectedGameId, setSelectedGameId] = useState<string>("");
   const [loading, setLoading] = useState(true);
@@ -64,11 +67,12 @@ const TeamsManagement = () => {
   useEffect(() => {
     if (selectedTournamentId && selectedGameId) {
       loadTeams();
+      loadRegistrations();
     } else {
       setTeams([]);
+      setRegistrations([]);
     }
   }, [selectedTournamentId, selectedGameId]);
-
   const loadTournaments = async () => {
     try {
       const data = await fetchTournaments();
@@ -132,7 +136,26 @@ const TeamsManagement = () => {
         variant: "destructive"
       });
     }
+  }
+
+
+  const loadRegistrations = async () => {
+    if (!selectedTournamentId || !selectedGameId) return;
+    try {
+      const data = await fetchRegistrations({
+        tournamentId: selectedTournamentId,
+        gameId: selectedGameId,
+      });
+      setRegistrations(data);
+    } catch (error: any) {
+      toast({
+        title: "Error fetching registrations",
+        description: error.message,
+        variant: "destructive"
+      });
+    }
   };
+
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -223,13 +246,18 @@ const TeamsManagement = () => {
     if (selectedPairPlayers.length !== 2) return;
 
     try {
+      // Get names of the selected players
+      const player1 = users.find(u => u.id === selectedPairPlayers[0]);
+      const player2 = users.find(u => u.id === selectedPairPlayers[1]);
+      const pairName = player1 && player2 ? `${player1.name} & ${player2.name}` : `Pair ${Date.now()}`;
+
       const teamId = await createTeam({
         tournament_id: selectedTournamentId,
         game_id: selectedGameId,
-        name: `Pair ${Date.now()}`,
+        name: pairName,
         is_pair: true,
         player_ids: selectedPairPlayers,
-        status: "pending"
+        status: "confirmed"
       });
 
       // Create participant for the pair
@@ -241,6 +269,17 @@ const TeamsManagement = () => {
       });
 
       toast({ title: "Pair created successfully" });
+
+      // Send notifications to players
+      for (const playerId of selectedPairPlayers) {
+        await createNotification({
+          user_id: playerId,
+          title: "Team Assignment",
+          message: `You have been added to a pair for ${getGameName(selectedGameId)} in ${getTournamentName(selectedTournamentId)}.`,
+          type: "team_assignment"
+        });
+      }
+
       setPairDialogOpen(false);
       setSelectedPairPlayers([]);
       loadTeams();
@@ -273,6 +312,17 @@ const TeamsManagement = () => {
       }
 
       toast({ title: "Team players updated successfully" });
+
+      // Send notifications to new players
+      for (const playerId of playersToAdd) {
+        await createNotification({
+          user_id: playerId,
+          title: "Team Assignment",
+          message: `You have been added to team ${selectedTeamForPlayers.name} for ${getGameName(selectedGameId)} in ${getTournamentName(selectedTournamentId)}.`,
+          type: "team_assignment"
+        });
+      }
+
       setPlayersDialogOpen(false);
       setSelectedTeamForPlayers(null);
       loadTeams();
@@ -309,6 +359,20 @@ const TeamsManagement = () => {
   const getUserName = (userId: string) => {
     const user = users.find(u => u.id === userId);
     return user?.name || "Unknown User";
+  };
+
+  const isUserRegistered = (userId: string) => {
+    return registrations.some(r => r.user_id === userId);
+  };
+
+  const getSubstitutedUserTeam = (userId: string) => {
+    // Check if user is in any team for this game 
+    // Excluding the current team if we are editing
+    const team = teams.find(t =>
+      t.player_ids.includes(userId) &&
+      (selectedTeamForPlayers ? t.id !== selectedTeamForPlayers.id : true)
+    );
+    return team;
   };
 
   return (
@@ -355,99 +419,109 @@ const TeamsManagement = () => {
             </Select>
           </div>
 
-          {isTeamGame && (
-            <Dialog open={dialogOpen} onOpenChange={(open) => {
-              setDialogOpen(open);
-              if (open && !editingId) {
-                setFormData(prev => ({
-                  ...prev,
-                  tournament_id: selectedTournamentId,
-                  game_id: selectedGameId,
-                  is_pair: false
-                }));
-              }
-              if (!open) resetForm();
-            }}>
+          <Dialog open={dialogOpen} onOpenChange={(open) => {
+            setDialogOpen(open);
+            if (open && !editingId) {
+              setFormData(prev => ({
+                ...prev,
+                tournament_id: selectedTournamentId,
+                game_id: selectedGameId,
+                is_pair: false
+              }));
+            }
+            if (!open) resetForm();
+          }}>
+            {isTeamGame && (
               <DialogTrigger asChild>
                 <Button disabled={!selectedTournamentId || !selectedGameId}>
                   <Plus className="h-4 w-4 mr-2" />
                   Add Team
                 </Button>
               </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>{editingId ? "Edit" : "Create"} Team</DialogTitle>
-                </DialogHeader>
-                <form onSubmit={handleSubmit} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="tournament_id">Tournament</Label>
-                    <Select
-                      value={formData.tournament_id}
-                      onValueChange={(value) => setFormData({ ...formData, tournament_id: value })}
-                      disabled={!!editingId}
-                    >
-                      <SelectTrigger id="tournament_id">
-                        <SelectValue placeholder="Select tournament" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {tournaments.map((tournament) => (
-                          <SelectItem key={tournament.id} value={tournament.id}>
-                            {tournament.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="game_id">Game</Label>
-                    <Select
-                      value={formData.game_id}
-                      onValueChange={(value) => setFormData({ ...formData, game_id: value })}
-                      disabled={!!editingId}
-                    >
-                      <SelectTrigger id="game_id">
-                        <SelectValue placeholder="Select game" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {games.map((game) => (
-                          <SelectItem key={game.id} value={game.id}>
-                            {game.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="name">Team Name</Label>
-                    <Input
-                      id="name"
-                      value={formData.name}
-                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="status">Status</Label>
-                    <Select
-                      value={formData.status}
-                      onValueChange={(value) => setFormData({ ...formData, status: value as "pending" | "confirmed" })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="pending">Pending</SelectItem>
-                        <SelectItem value="confirmed">Confirmed</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <Button type="submit" className="w-full">
-                    {editingId ? "Update" : "Create"} Team
-                  </Button>
-                </form>
-              </DialogContent>
-            </Dialog>
-          )}
+            )}
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>{editingId ? "Edit" : "Create"} Team</DialogTitle>
+              </DialogHeader>
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="tournament_id">Tournament</Label>
+                  <Select
+                    value={formData.tournament_id}
+                    onValueChange={(value) => setFormData({ ...formData, tournament_id: value })}
+                    disabled={!!editingId}
+                  >
+                    <SelectTrigger id="tournament_id">
+                      <SelectValue placeholder="Select tournament" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {tournaments.map((tournament) => (
+                        <SelectItem key={tournament.id} value={tournament.id}>
+                          {tournament.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="game_id">Game</Label>
+                  <Select
+                    value={formData.game_id}
+                    onValueChange={(value) => setFormData({ ...formData, game_id: value })}
+                    disabled={!!editingId}
+                  >
+                    <SelectTrigger id="game_id">
+                      <SelectValue placeholder="Select game" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {games.map((game) => (
+                        <SelectItem key={game.id} value={game.id}>
+                          {game.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="name">Team Name</Label>
+                  <Input
+                    id="name"
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="status">Status</Label>
+                  <Select
+                    value={formData.status}
+                    onValueChange={(value) => setFormData({ ...formData, status: value as "pending" | "confirmed" })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="pending">Pending</SelectItem>
+                      <SelectItem
+                        value="confirmed"
+                        disabled={
+                          editingId ?
+                            (teams.find(t => t.id === editingId)?.player_ids.length || 0) < (selectedGame?.players_per_team || 1)
+                            : true
+                        }
+                      >
+                        Confirmed {editingId && (teams.find(t => t.id === editingId)?.player_ids.length || 0) < (selectedGame?.players_per_team || 1) ? "(Add players first)" : ""}
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <Button type="submit" className="w-full">
+                  {editingId ? "Update" : "Create"} Team
+                </Button>
+              </form>
+            </DialogContent>
+          </Dialog>
+
 
           {isPairGame && (
             <Button disabled={!selectedTournamentId || !selectedGameId} onClick={() => setPairDialogOpen(true)}>
@@ -505,7 +579,7 @@ const TeamsManagement = () => {
                     <Button variant="outline" size="sm" onClick={() => handleManagePlayers(team)}>
                       <Users className="h-4 w-4" />
                     </Button>
-                    {!team.is_pair && (
+                    {(!team.is_pair) && (
                       <Button variant="outline" size="sm" onClick={() => handleEdit(team)}>
                         <Pencil className="h-4 w-4" />
                       </Button>
@@ -564,28 +638,42 @@ const TeamsManagement = () => {
             <div className="max-h-96 overflow-y-auto">
               {users
                 .filter((user) =>
-                  user.name.toLowerCase().includes(userSearchTerm.toLowerCase()) ||
-                  user.email.toLowerCase().includes(userSearchTerm.toLowerCase())
+                  (user.name.toLowerCase().includes(userSearchTerm.toLowerCase()) ||
+                    user.email.toLowerCase().includes(userSearchTerm.toLowerCase())) &&
+                  isUserRegistered(user.id)
                 )
-                .map((user) => (
-                <div key={user.id} className="flex items-center space-x-2 p-2 border-b">
-                  <Checkbox
-                    id={`pair-user-${user.id}`}
-                    checked={selectedPairPlayers.includes(user.id)}
-                    disabled={!selectedPairPlayers.includes(user.id) && selectedPairPlayers.length >= 2}
-                    onCheckedChange={(checked) => {
-                      if (checked) {
-                        setSelectedPairPlayers(prev => [...prev, user.id]);
-                      } else {
-                        setSelectedPairPlayers(prev => prev.filter(id => id !== user.id));
-                      }
-                    }}
-                  />
-                  <Label htmlFor={`pair-user-${user.id}`} className="flex-1">
-                    {user.name} ({user.email})
-                  </Label>
-                </div>
-                ))}
+                .map((user) => {
+                  const existingTeam = getSubstitutedUserTeam(user.id);
+                  const isDisabled = (!!existingTeam && !selectedPairPlayers.includes(user.id)) ||
+                    (!selectedPairPlayers.includes(user.id) && selectedPairPlayers.length >= 2);
+
+                  return (
+                    <div key={user.id} className="flex items-center space-x-2 p-2 border-b">
+                      <Checkbox
+                        id={`pair-user-${user.id}`}
+                        checked={selectedPairPlayers.includes(user.id)}
+                        disabled={isDisabled}
+                        onCheckedChange={(checked) => {
+                          if (checked) {
+                            setSelectedPairPlayers(prev => [...prev, user.id]);
+                          } else {
+                            setSelectedPairPlayers(prev => prev.filter(id => id !== user.id));
+                          }
+                        }}
+                      />
+                      <div className="flex-1">
+                        <Label htmlFor={`pair-user-${user.id}`} className={isDisabled && existingTeam ? "text-muted-foreground" : ""}>
+                          {user.name} ({user.email})
+                        </Label>
+                        {existingTeam && (
+                          <p className="text-xs text-red-500">
+                            Already in {existingTeam.is_pair ? "a pair" : existingTeam.name}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  )
+                })}
             </div>
             <div className="flex justify-end gap-2">
               <Button variant="outline" onClick={() => setPairDialogOpen(false)}>
@@ -633,32 +721,47 @@ const TeamsManagement = () => {
                 className="w-full"
               />
             </div>
+
             <div className="max-h-96 overflow-y-auto">
               {users
                 .filter((user) =>
-                  user.name.toLowerCase().includes(userSearchTerm.toLowerCase()) ||
-                  user.email.toLowerCase().includes(userSearchTerm.toLowerCase())
+                  (user.name.toLowerCase().includes(userSearchTerm.toLowerCase()) ||
+                    user.email.toLowerCase().includes(userSearchTerm.toLowerCase())) &&
+                  isUserRegistered(user.id)
                 )
-                .map((user) => (
-                <div key={user.id} className="flex items-center space-x-2 p-2 border-b">
-                  <Checkbox
-                    id={`user-${user.id}`}
-                    checked={selectedPlayers.includes(user.id)}
-                    disabled={!selectedPlayers.includes(user.id) &&
-                      selectedPlayers.length >= (selectedTeamForPlayers?.is_pair ? 2 : (selectedGame?.players_per_team || 1))}
-                    onCheckedChange={(checked) => {
-                      if (checked) {
-                        setSelectedPlayers(prev => [...prev, user.id]);
-                      } else {
-                        setSelectedPlayers(prev => prev.filter(id => id !== user.id));
-                      }
-                    }}
-                  />
-                  <Label htmlFor={`user-${user.id}`} className="flex-1">
-                    {user.name} ({user.email})
-                  </Label>
-                </div>
-                ))}
+                .map((user) => {
+                  const existingTeam = getSubstitutedUserTeam(user.id);
+                  const limit = selectedTeamForPlayers?.is_pair ? 2 : (selectedGame?.players_per_team || 1);
+                  const isDisabled = (!!existingTeam && !selectedPlayers.includes(user.id)) ||
+                    (!selectedPlayers.includes(user.id) && selectedPlayers.length >= limit);
+
+                  return (
+                    <div key={user.id} className="flex items-center space-x-2 p-2 border-b">
+                      <Checkbox
+                        id={`user-${user.id}`}
+                        checked={selectedPlayers.includes(user.id)}
+                        disabled={isDisabled}
+                        onCheckedChange={(checked) => {
+                          if (checked) {
+                            setSelectedPlayers(prev => [...prev, user.id]);
+                          } else {
+                            setSelectedPlayers(prev => prev.filter(id => id !== user.id));
+                          }
+                        }}
+                      />
+                      <div className="flex-1">
+                        <Label htmlFor={`user-${user.id}`} className={isDisabled && existingTeam ? "text-muted-foreground" : ""}>
+                          {user.name} ({user.email})
+                        </Label>
+                        {existingTeam && (
+                          <p className="text-xs text-red-500">
+                            Already in {existingTeam.is_pair ? "a pair" : existingTeam.name}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  )
+                })}
             </div>
             <div className="flex justify-end gap-2">
               <Button variant="outline" onClick={() => setPlayersDialogOpen(false)}>
