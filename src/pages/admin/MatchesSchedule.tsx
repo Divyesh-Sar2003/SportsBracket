@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, isToday, startOfWeek, endOfWeek, isValid } from "date-fns";
 import { ChevronLeft, ChevronRight, Plus, Clock, MapPin, Users, Trophy, Calendar as CalendarIcon, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -13,15 +13,20 @@ import { fetchGames } from "@/services/firestore/games";
 import { fetchTeams } from "@/services/firestore/teams";
 import { createMatch, fetchMatches, updateMatch } from "@/services/firestore/matches";
 import { createNotification } from "@/services/firestore/notifications";
-import { Tournament, Game, Team, Match } from "@/types/tournament";
+import { Tournament, Game, Team, Match, Participant } from "@/types/tournament";
+import { fetchParticipants } from "@/services/firestore/participants";
+import { fetchUsers, User } from "@/services/firestore/users";
 
 const MatchesSchedule = () => {
     const [currentMonth, setCurrentMonth] = useState(new Date());
     const [selectedDate, setSelectedDate] = useState<Date | null>(null);
     const [matches, setMatches] = useState<Match[]>([]);
     const [tournaments, setTournaments] = useState<Tournament[]>([]);
-    const [games, setGames] = useState<Game[]>([]);
+    const [games, setGames] = useState<Game[]>([]); // Games for selected tournament
+    const [allGames, setAllGames] = useState<Game[]>([]); // All games for global lookup
     const [teams, setTeams] = useState<Team[]>([]);
+    const [users, setUsers] = useState<User[]>([]);
+    const [participants, setParticipants] = useState<Participant[]>([]);
     const [loading, setLoading] = useState(true);
     const [dialogOpen, setDialogOpen] = useState(false);
     const { toast } = useToast();
@@ -29,14 +34,16 @@ const MatchesSchedule = () => {
     // Form State
     const [selectedTournamentId, setSelectedTournamentId] = useState("");
     const [selectedGameId, setSelectedGameId] = useState("");
-    const [teamAId, setTeamAId] = useState("");
-    const [teamBId, setTeamBId] = useState("");
+    // We now select Participant IDs, not raw Team IDs
+    const [participantAId, setParticipantAId] = useState("");
+    const [participantBId, setParticipantBId] = useState("");
     const [matchTime, setMatchTime] = useState("");
     const [location, setLocation] = useState("");
     const [submitting, setSubmitting] = useState(false);
 
     useEffect(() => {
         loadInitialData();
+        loadMatches();
     }, []);
 
     useEffect(() => {
@@ -50,27 +57,27 @@ const MatchesSchedule = () => {
 
     useEffect(() => {
         if (selectedTournamentId && selectedGameId) {
-            loadTeams(selectedTournamentId, selectedGameId);
+            loadParticipantsAndTeams(selectedTournamentId, selectedGameId);
         } else {
             setTeams([]);
-            setTeamAId("");
-            setTeamBId("");
+            setParticipants([]);
+            setParticipantAId("");
+            setParticipantBId("");
         }
     }, [selectedTournamentId, selectedGameId]);
 
-    // Refresh matches when month changes (or just fetch all for now?)
-    // Better to fetch per selected tournament typically, but for a global calendar we might want all.
-    // For now, let's fetch all matches. If it gets heavy, we optimize.
-    useEffect(() => {
-        loadMatches();
-    }, []);
-
     const loadInitialData = async () => {
         try {
-            const tournamentData = await fetchTournaments();
+            const [tournamentData, allGamesData, usersData] = await Promise.all([
+                fetchTournaments(),
+                fetchGames(),
+                fetchUsers()
+            ]);
             setTournaments(tournamentData);
+            setAllGames(allGamesData);
+            setUsers(usersData);
         } catch (error) {
-            console.error("Error loading tournaments:", error);
+            console.error("Error loading initial data:", error);
         }
     };
 
@@ -83,33 +90,32 @@ const MatchesSchedule = () => {
         }
     };
 
-    const loadTeams = async (tournamentId: string, gameId: string) => {
+    const loadParticipantsAndTeams = async (tournamentId: string, gameId: string) => {
         try {
-            const teamsData = await fetchTeams({ tournamentId, gameId });
+            const [teamsData, participantsData] = await Promise.all([
+                fetchTeams({ tournamentId, gameId }),
+                fetchParticipants({ tournamentId, gameId })
+            ]);
             setTeams(teamsData);
+            setParticipants(participantsData);
         } catch (error) {
-            console.error("Error loading teams:", error);
+            console.error("Error loading participants/teams:", error);
         }
     };
 
     const loadMatches = async () => {
         setLoading(true);
         try {
-            // Fetch all matches for now.
-            // Ensure we have tournaments loaded.
-            let currentTournaments = tournaments;
-            if (tournaments.length === 0) {
-                currentTournaments = await fetchTournaments();
-                setTournaments(currentTournaments);
-            }
-
-            if (currentTournaments.length === 0) {
+            // Fetch all matches globally or per tournament. 
+            // We'll fetch all matches for simplicity to show on calendar.
+            // If optimization needed, we can fetch range-based.
+            const tournamentsList = await fetchTournaments();
+            if (tournamentsList.length === 0) {
                 setMatches([]);
             } else {
-                const allMatches = await Promise.all(currentTournaments.map(tour => fetchMatches({ tournamentId: tour.id })));
+                const allMatches = await Promise.all(tournamentsList.map(tour => fetchMatches({ tournamentId: tour.id })));
                 setMatches(allMatches.flat());
             }
-
         } catch (error) {
             console.error("Error loading matches:", error);
         } finally {
@@ -118,13 +124,13 @@ const MatchesSchedule = () => {
     };
 
     const handleCreateMatch = async () => {
-        if (!selectedDate || !selectedTournamentId || !selectedGameId || !teamAId || !teamBId || !matchTime) {
+        if (!selectedDate || !selectedTournamentId || !selectedGameId || !participantAId || !participantBId || !matchTime) {
             toast({ title: "Please fill all fields", variant: "destructive" });
             return;
         }
 
-        if (teamAId === teamBId) {
-            toast({ title: "Teams must be different", variant: "destructive" });
+        if (participantAId === participantBId) {
+            toast({ title: "Participants must be different", variant: "destructive" });
             return;
         }
 
@@ -138,8 +144,8 @@ const MatchesSchedule = () => {
             const matchData = {
                 tournament_id: selectedTournamentId,
                 game_id: selectedGameId,
-                participant_a_id: teamAId,
-                participant_b_id: teamBId,
+                participant_a_id: participantAId,
+                participant_b_id: participantBId,
                 match_time: startDateTime.toISOString(),
                 status: 'SCHEDULED' as const,
                 venue: location,
@@ -156,23 +162,35 @@ const MatchesSchedule = () => {
             resetForm();
 
             // Notifications
-            const teamA = teams.find(t => t.id === teamAId);
-            const teamB = teams.find(t => t.id === teamBId);
+            const pA = participants.find(p => p.id === participantAId);
+            const pB = participants.find(p => p.id === participantBId);
+            const game = games.find(g => g.id === selectedGameId);
 
-            const notifyPlayers = async (team: Team | undefined) => {
-                if (!team) return;
-                for (const playerId of team.player_ids) {
-                    await createNotification({
-                        user_id: playerId,
-                        title: "Match Scheduled",
-                        message: `Your match vs ${team === teamA ? teamB?.name : teamA?.name} is scheduled on ${startDateTime.toLocaleString()}`,
-                        type: "match_scheduled"
-                    });
+            const notifyUser = async (uid: string) => {
+                await createNotification({
+                    user_id: uid,
+                    title: "New Match Scheduled",
+                    message: `A new match for ${game?.name || 'your game'} has been scheduled at ${format(startDateTime, 'PPp')}.`,
+                    type: "MATCH_SCHEDULED",
+                    payload: { match_id: "new", game_id: selectedGameId }
+                });
+            };
+
+            const resolveAndNotify = async (p?: Participant) => {
+                if (!p) return;
+                if (p.type === 'USER' && p.user_id) {
+                    await notifyUser(p.user_id);
+                } else if (p.type === 'TEAM' && p.team_id) {
+                    const team = teams.find(t => t.id === p.team_id);
+                    if (team?.player_ids) {
+                        for (const uid of team.player_ids) {
+                            await notifyUser(uid);
+                        }
+                    }
                 }
             };
 
-            await notifyPlayers(teamA);
-            await notifyPlayers(teamB);
+            await Promise.all([resolveAndNotify(pA), resolveAndNotify(pB)]);
 
         } catch (error: any) {
             toast({ title: "Error scheduling match", description: error.message, variant: "destructive" });
@@ -182,23 +200,49 @@ const MatchesSchedule = () => {
     };
 
     const resetForm = () => {
-        setTeamAId("");
-        setTeamBId("");
+        setParticipantAId("");
+        setParticipantBId("");
         setMatchTime("");
         setLocation("");
-        // Keep Tournament/Game selected for convenience
     };
 
     const getMatchesForDate = (date: Date) => {
         return matches.filter(m => {
             if (!m.match_time) return false;
-            // Handle both Firestore Timestamp and string
             const matchDate = (m.match_time as any)?.toDate
                 ? (m.match_time as any).toDate()
                 : new Date(m.match_time!);
             if (!isValid(matchDate)) return false;
             return isSameDay(matchDate, date);
         });
+    };
+
+    // Helper maps
+    const gamesMap = useMemo(() => {
+        return allGames.reduce<Record<string, Game>>((acc, g) => { acc[g.id] = g; return acc; }, {});
+    }, [allGames]);
+
+    const usersMap = useMemo(() => {
+        return users.reduce<Record<string, User>>((acc, u) => { acc[u.id] = u; return acc; }, {});
+    }, [users]);
+
+    const teamsMap = useMemo(() => {
+        return teams.reduce<Record<string, Team>>((acc, t) => { acc[t.id] = t; return acc; }, {});
+    }, [teams]);
+
+    const getParticipantName = (participantId: string) => {
+        // We often don't have the participant object handy here for the *list* unless we fetch ALL participants globally.
+        // But for the form we have `participants` state.
+        // For the match cards in calendar, we only have match.participant_a_id.
+        // If we want to show names in calendar, we'd need to fetch participants for those matches or rely on a global participant fetch (expensive).
+        // For now, request was "specify the game name". Names of players in calendar might be nice but let's stick to Game Name request first.
+        return "Participant";
+    };
+
+    const getResolvedParticipantNameFromObject = (p: Participant) => {
+        if (p.type === 'USER' && p.user_id) return usersMap[p.user_id]?.name || "Unknown User";
+        if (p.type === 'TEAM' && p.team_id) return teamsMap[p.team_id]?.name || "Unknown Team";
+        return "Unknown";
     };
 
     // Calendar Grid Logic
@@ -208,31 +252,37 @@ const MatchesSchedule = () => {
     const endDate = endOfWeek(monthEnd);
     const calendarDays = eachDayOfInterval({ start: startDate, end: endDate });
 
-    const weeks = [];
-    let days = [];
-    let day = startDate;
-
-    while (day <= endDate) {
-        for (let i = 0; i < 7; i++) {
-            days.push(day);
-            day = new Date(day.setDate(day.getDate() + 1));
-        }
-        weeks.push(days);
-        days = [];
-    }
-
-    // Fix: the while loop logic above modifies 'day' in place via setDate which returns timestamp.
-    // correctly using addDays from date-fns is safer or just reconstructing. 
-    // Actually eachDayOfInterval gives us the array correctly.
-    // Let's rely on `calendarDays` and chunk it.
-
     const calendarChunks = [];
     for (let i = 0; i < calendarDays.length; i += 7) {
         calendarChunks.push(calendarDays.slice(i, i + 7));
     }
 
-
     const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+    // Derived state for form
+    const selectedGame = games.find(g => g.id === selectedGameId);
+    const isSinglePlayer = selectedGame?.game_type === 'SINGLE';
+    const formLabel = isSinglePlayer ? "Player" : "Team";
+
+    // Filter participants based on game type
+    const availableParticipants = useMemo(() => {
+        return participants.filter(p => {
+            if (isSinglePlayer) return p.type === 'USER';
+            return p.type === 'TEAM';
+        });
+    }, [participants, isSinglePlayer]);
+
+    const scheduledParticipantIds = useMemo(() => {
+        if (!selectedGameId) return new Set<string>();
+        const scheduled = new Set<string>();
+        matches
+            .filter(m => m.game_id === selectedGameId && m.status?.toUpperCase() !== 'CANCELLED')
+            .forEach(m => {
+                if (m.participant_a_id) scheduled.add(m.participant_a_id);
+                if (m.participant_b_id) scheduled.add(m.participant_b_id);
+            });
+        return scheduled;
+    }, [matches, selectedGameId]);
 
     return (
         <div className="space-y-6">
@@ -306,12 +356,13 @@ const MatchesSchedule = () => {
                                                 const matchDate = (match.match_time as any)?.toDate
                                                     ? (match.match_time as any).toDate()
                                                     : new Date(match.match_time!);
+                                                const gameName = gamesMap[match.game_id]?.name || "Unknown Game";
 
                                                 if (!isValid(matchDate)) return null;
 
                                                 return (
                                                     <div key={match.id} className="text-xs p-1 rounded bg-secondary truncate">
-                                                        {format(matchDate, "HH:mm")} - Match
+                                                        {format(matchDate, "HH:mm")} - {gameName}
                                                     </div>
                                                 );
                                             })}
@@ -339,24 +390,23 @@ const MatchesSchedule = () => {
                     </DialogHeader>
 
                     <div className="grid gap-6 py-4">
-                        {/* Existing Matches List */}
+                        {/* Existing Matches List for Selected Date */}
                         {selectedDate && getMatchesForDate(selectedDate).length > 0 && (
                             <div className="space-y-3">
                                 <h3 className="font-semibold text-sm text-muted-foreground uppercase">Scheduled Matches</h3>
                                 {getMatchesForDate(selectedDate).map(match => {
-                                    // Helper to find names (would be better to have helper functions or map)
-                                    // For MVP we just show IDs or better fetch names. 
                                     const matchDate = (match.match_time as any)?.toDate
                                         ? (match.match_time as any).toDate()
                                         : new Date(match.match_time!);
                                     const timeString = isValid(matchDate) ? format(matchDate, "HH:mm") : "TBD";
+                                    const gameName = gamesMap[match.game_id]?.name || "Unknown Game";
 
                                     return (
                                         <div key={match.id} className="flex items-center justify-between p-3 border rounded-lg">
                                             <div className="flex items-center gap-3">
                                                 <Clock className="h-4 w-4 text-muted-foreground" />
                                                 <span>{timeString}</span>
-                                                <span className="font-medium">Match {match.id.slice(-4)}</span> {/* Placeholder name */}
+                                                <span className="font-medium">{gameName}</span>
                                             </div>
                                             {match.venue && (
                                                 <div className="flex items-center gap-1 text-sm text-muted-foreground">
@@ -406,28 +456,48 @@ const MatchesSchedule = () => {
 
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-2">
-                                    <Label>Team A</Label>
-                                    <Select value={teamAId} onValueChange={setTeamAId} disabled={!selectedGameId}>
+                                    <Label>{formLabel} A</Label>
+                                    <Select value={participantAId} onValueChange={setParticipantAId} disabled={!selectedGameId}>
                                         <SelectTrigger>
-                                            <SelectValue placeholder="Select team" />
+                                            <SelectValue placeholder={`Select ${formLabel.toLowerCase()}`} />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            {teams.map(t => (
-                                                <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
-                                            ))}
+                                            {availableParticipants.map(p => {
+                                                const isScheduled = scheduledParticipantIds.has(p.id);
+                                                return (
+                                                    <SelectItem
+                                                        key={p.id}
+                                                        value={p.id}
+                                                        disabled={isScheduled}
+                                                    >
+                                                        {getResolvedParticipantNameFromObject(p)}
+                                                        {isScheduled && " (Already Scheduled)"}
+                                                    </SelectItem>
+                                                );
+                                            })}
                                         </SelectContent>
                                     </Select>
                                 </div>
                                 <div className="space-y-2">
-                                    <Label>Team B</Label>
-                                    <Select value={teamBId} onValueChange={setTeamBId} disabled={!selectedGameId}>
+                                    <Label>{formLabel} B</Label>
+                                    <Select value={participantBId} onValueChange={setParticipantBId} disabled={!selectedGameId}>
                                         <SelectTrigger>
-                                            <SelectValue placeholder="Select team" />
+                                            <SelectValue placeholder={`Select ${formLabel.toLowerCase()}`} />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            {teams.filter(t => t.id !== teamAId).map(t => (
-                                                <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
-                                            ))}
+                                            {availableParticipants.filter(p => p.id !== participantAId).map(p => {
+                                                const isScheduled = scheduledParticipantIds.has(p.id);
+                                                return (
+                                                    <SelectItem
+                                                        key={p.id}
+                                                        value={p.id}
+                                                        disabled={isScheduled}
+                                                    >
+                                                        {getResolvedParticipantNameFromObject(p)}
+                                                        {isScheduled && " (Already Scheduled)"}
+                                                    </SelectItem>
+                                                );
+                                            })}
                                         </SelectContent>
                                     </Select>
                                 </div>
@@ -452,7 +522,7 @@ const MatchesSchedule = () => {
                                 </div>
                             </div>
 
-                            <Button onClick={handleCreateMatch} disabled={submitting || !matchTime || !teamAId || !teamBId} className="w-full">
+                            <Button onClick={handleCreateMatch} disabled={submitting || !matchTime || !participantAId || !participantBId} className="w-full">
                                 {submitting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
                                 Schedule Match
                             </Button>

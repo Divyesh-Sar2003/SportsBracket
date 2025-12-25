@@ -98,6 +98,7 @@ export const submitMatchResult = async (
 
   await updateMatch(matchId, {
     status: "COMPLETED",
+    winner_participant_id: result.winner_participant_id,
   });
 
   return ref.id;

@@ -6,11 +6,13 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useAuth } from "@/contexts/AuthContext";
 import { fetchMatchResultsForMatches, fetchMatchesForParticipants } from "@/services/firestore/matches"; // Modified import
-import { fetchUserParticipants } from "@/services/firestore/participants";
+import { fetchUserParticipants, fetchParticipantsByTeamIds } from "@/services/firestore/participants";
 import { fetchTeams } from "@/services/firestore/teams";
 import { Match, Team, Participant } from "@/types/tournament"; // Ensure Match is imported
 import { useNavigate } from "react-router-dom";
 import { fetchGames } from "@/services/firestore/games";
+import { fetchUsers, User } from "@/services/firestore/users";
+import { fetchParticipants } from "@/services/firestore/participants";
 
 const PlayerSchedule = () => {
     const { user } = useAuth();
@@ -21,58 +23,38 @@ const PlayerSchedule = () => {
     const [loading, setLoading] = useState(true);
     const [dialogOpen, setDialogOpen] = useState(false);
     const [games, setGames] = useState<any[]>([]);
+    const [allParticipants, setAllParticipants] = useState<Participant[]>([]);
+    const [users, setUsers] = useState<User[]>([]);
+    const [teamsState, setTeamsState] = useState<Team[]>([]);
 
     useEffect(() => {
         const loadSchedule = async () => {
             if (!user) return;
             setLoading(true);
             try {
-                // Fetch user participants/teams to find their matches
-                // Approach 1: Get all participants for user (Single or Team)
-                // Approach 2: Get all teams user is in.
+                // Fetch basic data for mapping
+                const [gamesData, usersData, allTeams] = await Promise.all([
+                    fetchGames(),
+                    fetchUsers(),
+                    fetchTeams({ userId: user.uid })
+                ]);
 
-                // Fetch games to map names
-                const gamesData = await fetchGames();
                 setGames(gamesData);
+                setUsers(usersData);
+                setTeamsState(allTeams);
 
-                // Fetch teams user belongs to
-                const teams = await fetchTeams({ userId: user.uid });
-                const teamIds = teams.map(t => t.id);
+                // Find all participant IDs relevant to the user
+                const teamIds = allTeams.map(t => t.id);
 
-                // Fetch participants where user_id is user.uid OR team_id is in teamIds.
-                // Currently fetchParticipants filters by tournament/game.
-                // We likely need a way to fetch matches directly for a user.
-                // My `fetchMatchesForParticipants` service takes participant IDs.
-                // I need to resolve "Participant IDs" for the user.
-                // In this system, 'Matches' link 'Participant IDs'. 
-                // A Participant has a user_id OR team_id.
+                const [userParticipants, teamParticipants] = await Promise.all([
+                    fetchUserParticipants(user.uid),
+                    fetchParticipantsByTeamIds(teamIds)
+                ]);
 
-                // So Step 1: Find all Participant entries for this user.
-                const userParticipants = await fetchUserParticipants(user.uid);
-                // Also find Participant entries for the teams the user is in.
-                // We don't have a direct "fetchParticipantsByTeamIds".
-                // But we can iterate teams.
+                const allMyParticipants = [...userParticipants, ...teamParticipants];
+                const participantIds = allMyParticipants.map(p => p.id);
 
-                // Simpler: fetchMatchesForParticipants checks 'participant_a_id' or 'participant_b_id'.
-                // If 'Participant' concept is used, these IDs are Participant IDs.
-                // If direct IDs are used (Team/User ID), then we pass those.
-                // 'TeamsManagement' implies direct usage of Team IDs or User IDs?
-                // `Match` type has `participant_a_id`.
-                // In `MatchesSchedule`, creating match used `teamAId` as `participant_a_id`.
-                // So `participant_a_id` IS `TeamID` (or UserID for singles).
-
-                const myIds = [user.uid, ...teamIds];
-                // Wait, if I am in a team "Team A", match uses "Team A ID".
-                // If I am single, match uses "User ID" directly? Or a "Participant" wrapper?
-                // `GameRegistration` creates a `Registration`.
-                // Where is `Participant` created? `ParticipantsManagement`.
-                // Usually matches map Participant entities.
-                // Let's assume matches use Team ID or User ID directly as per `MatchesSchedule.tsx` implementation.
-
-                // So pass `myIds` to `fetchMatchesForParticipants`. (I need to update that service to query correctly if it expects Participant Document IDs or just the ID string used in match).
-                // `MatchesSchedule` used `teamAId` directly. So `fetchMatchesForParticipants` should search for `participant_a_id` string match.
-
-                const myMatches = await fetchMatchesForParticipants(myIds);
+                const myMatches = await fetchMatchesForParticipants(participantIds);
                 setMatches(myMatches);
 
             } catch (error) {
@@ -100,7 +82,8 @@ const PlayerSchedule = () => {
     };
 
     const handleMatchClick = () => {
-        navigate("/dashboard/my-games");
+        setDialogOpen(false);
+        navigate("/dashboard/matches"); // Or where the detailed matches list is
     };
 
     // Calendar Grid Logic

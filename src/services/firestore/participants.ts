@@ -16,17 +16,20 @@ import { Participant } from "@/types/tournament";
 const participantsCollection = collection(db, "participants");
 
 export const fetchParticipants = async (options: {
-  tournamentId: string;
+  tournamentId?: string;
   gameId?: string;
 }) => {
-  const constraints = [
-    where("tournament_id", "==", options.tournamentId),
-    orderBy("created_at", "asc"),
-  ];
+  const constraints: any[] = [];
+
+  if (options.tournamentId) {
+    constraints.push(where("tournament_id", "==", options.tournamentId));
+  }
 
   if (options.gameId) {
-    constraints.splice(1, 0, where("game_id", "==", options.gameId));
+    constraints.push(where("game_id", "==", options.gameId));
   }
+
+  constraints.push(orderBy("created_at", "asc"));
 
   const participantsQuery = query(participantsCollection, ...constraints);
   const snapshot = await getDocs(participantsQuery);
@@ -37,6 +40,25 @@ export const fetchUserParticipants = async (userId: string) => {
   const q = query(participantsCollection, where("user_id", "==", userId));
   const snapshot = await getDocs(q);
   return snapshot.docs.map((docSnap) => ({ id: docSnap.id, ...(docSnap.data() as Participant) }));
+};
+
+export const fetchParticipantsByTeamIds = async (teamIds: string[]) => {
+  if (teamIds.length === 0) return [];
+
+  // Chunking for 'in' query
+  const chunks = [];
+  for (let i = 0; i < teamIds.length; i += 10) {
+    chunks.push(teamIds.slice(i, i + 10));
+  }
+
+  const allParticipants: Participant[] = [];
+  for (const chunk of chunks) {
+    const q = query(participantsCollection, where("team_id", "in", chunk));
+    const snapshot = await getDocs(q);
+    snapshot.docs.forEach(d => allParticipants.push({ id: d.id, ...d.data() } as Participant));
+  }
+
+  return allParticipants;
 };
 
 export const addParticipant = async (

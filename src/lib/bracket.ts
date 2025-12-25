@@ -33,7 +33,17 @@ export const generateSingleEliminationBracket = (
     if (a.seed && b.seed) return a.seed - b.seed;
     if (a.seed) return -1;
     if (b.seed) return 1;
-    return (a.created_at || "").localeCompare(b.created_at || "");
+    const getTime = (date: any) => {
+      if (!date) return 0;
+      if (typeof date === "string") return new Date(date).getTime();
+      if (date.toDate) return date.toDate().getTime(); // Firestore Timestamp
+      if (date instanceof Date) return date.getTime();
+      return 0;
+    };
+
+    const timeA = getTime(a.created_at);
+    const timeB = getTime(b.created_at);
+    return timeA - timeB;
   });
 
   const totalPlayers = sorted.length;
@@ -104,6 +114,10 @@ export const persistGeneratedMatches = async (
         tournament_id: tournamentId,
         game_id: gameId,
         ...match,
+        participant_a_id: match.participant_a_id ?? null,
+        participant_b_id: match.participant_b_id ?? null,
+        next_match_id: match.next_match_id ?? null,
+        winner_slot_in_next: match.winner_slot_in_next ?? null,
         status: "SCHEDULED",
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),

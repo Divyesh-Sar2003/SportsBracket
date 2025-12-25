@@ -25,6 +25,23 @@ const MyGames = () => {
     const [users, setUsers] = useState<User[]>([]);
     const [loading, setLoading] = useState(true);
 
+    const formatDate = (date: any) => {
+        if (!date) return "N/A";
+        let d: Date;
+        if (typeof date === 'object' && date.toDate) {
+            d = date.toDate();
+        } else if (typeof date === 'object' && date.seconds) {
+            d = new Date(date.seconds * 1000);
+        } else {
+            d = new Date(date);
+        }
+        if (isNaN(d.getTime())) return "N/A";
+        const day = String(d.getDate()).padStart(2, '0');
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const year = d.getFullYear();
+        return `${day}/${month}/${year}`;
+    };
+
     useEffect(() => {
         const loadData = async () => {
             if (!user) return;
@@ -134,7 +151,7 @@ const MyGames = () => {
                                     <span className="text-muted-foreground">Start:</span>
                                 </div>
                                 <span className="font-medium">
-                                    {new Date(tournament.start_date).toLocaleDateString()}
+                                    {formatDate(tournament.start_date)}
                                 </span>
                             </>
                         )}
@@ -149,18 +166,7 @@ const MyGames = () => {
                     )}
 
                     <div className="pt-2 text-xs text-muted-foreground">
-                        Registered on {(() => {
-                            if (!registration.created_at) return 'N/A';
-                            let date;
-                            if ((registration.created_at as any).toDate) {
-                                date = (registration.created_at as any).toDate();
-                            } else if ((registration.created_at as any).seconds) {
-                                date = new Date((registration.created_at as any).seconds * 1000);
-                            } else {
-                                date = new Date(registration.created_at);
-                            }
-                            return isNaN(date.getTime()) ? 'Invalid Date' : date.toLocaleDateString();
-                        })()}
+                        Registered on {formatDate(registration.created_at)}
                     </div>
                 </CardContent>
             </Card>

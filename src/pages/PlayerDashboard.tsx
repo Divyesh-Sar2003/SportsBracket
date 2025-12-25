@@ -1,4 +1,4 @@
-import { Navigate, Routes, Route } from "react-router-dom";
+import { Navigate, Routes, Route, Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { PlayerSidebar } from "@/components/PlayerSidebar";
@@ -9,14 +9,18 @@ import { Trophy, Calendar, Users, Target } from "lucide-react";
 import ProfileManagement from "./player/ProfileManagement";
 import GameRegistration from "./player/GameRegistration";
 import MyGames from "./player/MyGames";
+import MyMatches from "./player/MyMatches";
 import Notifications from "./player/Notifications";
 import PlayerSchedule from "./player/PlayerSchedule";
 import { useState, useEffect } from "react";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "@/integrations/firebase/client";
 import { fetchRegistrations } from "@/services/firestore/registrations";
-import { fetchUserParticipants } from "@/services/firestore/participants";
+import { fetchUserParticipants, fetchParticipantsByTeamIds } from "@/services/firestore/participants";
 import { fetchMatchesForParticipants, fetchMatchResultsForMatches } from "@/services/firestore/matches";
+import { fetchTeams } from "@/services/firestore/teams";
+import { createNotification } from "@/services/firestore/notifications";
+import { format } from "date-fns";
 
 const PlayerDashboard = () => {
   const { user, loading, isAdmin } = useAuth();
@@ -30,6 +34,21 @@ const PlayerDashboard = () => {
 
   const [tournaments, setTournaments] = useState<any[]>([]);
   const [recentActivity, setRecentActivity] = useState<any[]>([]);
+
+  const formatDate = (date: any) => {
+    if (!date) return "N/A";
+    let d: Date;
+    if (typeof date === 'object' && date.toDate) {
+      d = date.toDate();
+    } else {
+      d = new Date(date);
+    }
+    if (isNaN(d.getTime())) return "N/A";
+    const day = String(d.getDate()).padStart(2, '0');
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const year = d.getFullYear();
+    return `${day}/${month}/${year}`;
+  };
 
   useEffect(() => {
     const fetchData = async () => {
@@ -58,14 +77,19 @@ const PlayerDashboard = () => {
           setTournaments(activeTournamentsData);
 
           const participants = await fetchUserParticipants(user.uid);
-          const participantIds = participants.map(p => p.id);
+          const userTeams = await fetchTeams({ userId: user.uid });
+          const teamIds = userTeams.map(t => t.id);
+          const teamParticipants = await fetchParticipantsByTeamIds(teamIds);
+
+          const allMyParticipants = [...participants, ...teamParticipants];
+          const participantIds = allMyParticipants.map(p => p.id);
 
           let matches = await fetchMatchesForParticipants(participantIds);
 
           // Sort matches by date descending for recent activity
           matches.sort((a, b) => {
-            const dateA = new Date(a.updated_at || a.created_at || 0).getTime();
-            const dateB = new Date(b.updated_at || b.created_at || 0).getTime();
+            const dateA = new Date(a.match_time || a.updated_at || a.created_at || 0).getTime();
+            const dateB = new Date(b.match_time || b.updated_at || b.created_at || 0).getTime();
             return dateB - dateA;
           });
 
@@ -73,7 +97,7 @@ const PlayerDashboard = () => {
           const activity = matches.slice(0, 5).map(m => ({
             title: `Match: ${m.round_name}`,
             description: `Status: ${m.status}`,
-            date: new Date(m.match_time || m.created_at || "").toLocaleDateString()
+            date: formatDate(m.match_time || m.created_at)
           }));
 
           // If no matches, maybe use registrations
@@ -86,7 +110,7 @@ const PlayerDashboard = () => {
             activity.push(...sortedRegs.slice(0, 5).map(r => ({
               title: "Joined Tournament",
               description: "Registration Approved",
-              date: new Date(r.created_at || "").toLocaleDateString()
+              date: formatDate(r.created_at)
             })));
           }
 
@@ -195,16 +219,18 @@ const PlayerDashboard = () => {
                       </CardContent>
                     </Card>
 
-                    <Card>
-                      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Upcoming Matches</CardTitle>
-                        <Calendar className="h-4 w-4 text-muted-foreground" />
-                      </CardHeader>
-                      <CardContent>
-                        <div className="text-2xl font-bold">{stats.upcomingMatches}</div>
-                        <p className="text-xs text-muted-foreground">Scheduled matches</p>
-                      </CardContent>
-                    </Card>
+                    <Link to="/dashboard/schedule">
+                      <Card className="hover:bg-muted/50 cursor-pointer transition-colors">
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                          <CardTitle className="text-sm font-medium">Upcoming Matches</CardTitle>
+                          <Calendar className="h-4 w-4 text-primary" />
+                        </CardHeader>
+                        <CardContent>
+                          <div className="text-2xl font-bold">{stats.upcomingMatches}</div>
+                          <p className="text-xs text-muted-foreground">Scheduled matches</p>
+                        </CardContent>
+                      </Card>
+                    </Link>
                   </div>
 
                   <div className="grid gap-6 md:grid-cols-2">
@@ -252,7 +278,7 @@ const PlayerDashboard = () => {
                                 </div>
                                 <div className="text-right">
                                   <p className="text-xs text-muted-foreground">
-                                    {new Date(tournament.start_date || "").toLocaleDateString()}
+                                    {formatDate(tournament.start_date)}
                                   </p>
                                 </div>
                               </div>
@@ -270,7 +296,7 @@ const PlayerDashboard = () => {
               } />
               <Route path="register" element={<GameRegistration />} />
               <Route path="my-games" element={<MyGames />} />
-              <Route path="matches" element={<PlayerSchedule />} />
+              <Route path="matches" element={<MyMatches />} />
               <Route path="schedule" element={<PlayerSchedule />} />
               <Route path="notifications" element={<Notifications />} />
               <Route path="profile" element={<ProfileManagement />} />

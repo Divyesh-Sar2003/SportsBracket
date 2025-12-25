@@ -75,6 +75,7 @@ export interface Match extends Timestamped {
   status: "SCHEDULED" | "COMPLETED" | "CANCELLED" | "scheduled" | "completed" | "cancelled"; // Support both cases
   next_match_id?: string;
   winner_slot_in_next?: "A" | "B";
+  winner_participant_id?: string;
 }
 
 export interface MatchResult extends Timestamped {

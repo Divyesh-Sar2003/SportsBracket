@@ -43,6 +43,23 @@ const TournamentsManagement = () => {
   });
   const { toast } = useToast();
 
+  const formatDate = (date: any) => {
+    if (!date) return "N/A";
+    let d: Date;
+    if (typeof date === 'object' && date.toDate) {
+      d = date.toDate();
+    } else if (typeof date === 'object' && date.seconds) {
+      d = new Date(date.seconds * 1000);
+    } else {
+      d = new Date(date);
+    }
+    if (isNaN(d.getTime())) return "N/A";
+    const day = String(d.getDate()).padStart(2, '0');
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const year = d.getFullYear();
+    return `${day}/${month}/${year}`;
+  };
+
   useEffect(() => {
     fetchTournaments();
   }, []);
@@ -143,7 +160,7 @@ const TournamentsManagement = () => {
           <h1 className="text-3xl font-bold">Tournaments</h1>
           <p className="text-muted-foreground mt-2">Manage tournament configurations</p>
         </div>
-        
+
         <Dialog open={dialogOpen} onOpenChange={(open) => {
           setDialogOpen(open);
           if (!open) resetForm();
@@ -207,8 +224,8 @@ const TournamentsManagement = () => {
                   <div>
                     <CardTitle>{tournament.name}</CardTitle>
                     <p className="text-sm text-muted-foreground mt-1">
-                      {tournament.start_date && tournament.end_date && 
-                        `${new Date(tournament.start_date).toLocaleDateString()} - ${new Date(tournament.end_date).toLocaleDateString()}`
+                      {tournament.start_date && tournament.end_date &&
+                        `${formatDate(tournament.start_date)} - ${formatDate(tournament.end_date)}`
                       }
                     </p>
                   </div>

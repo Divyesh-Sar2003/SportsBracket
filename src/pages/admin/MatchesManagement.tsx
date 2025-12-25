@@ -8,9 +8,11 @@ import { fetchTournaments } from "@/services/firestore/tournaments";
 import { fetchGames } from "@/services/firestore/games";
 import { fetchParticipants } from "@/services/firestore/participants";
 import { fetchMatches, updateMatch, submitMatchResult } from "@/services/firestore/matches";
-import { Participant, Match } from "@/types/tournament";
+import { Participant, Match, Team } from "@/types/tournament";
 import { generateSingleEliminationBracket, persistGeneratedMatches } from "@/lib/bracket";
 import { useToast } from "@/hooks/use-toast";
+import { fetchUsers, User } from "@/services/firestore/users";
+import { fetchTeams } from "@/services/firestore/teams";
 
 type TournamentOption = { id: string; name: string };
 
@@ -19,6 +21,8 @@ const MatchesManagement = () => {
   const [games, setGames] = useState<any[]>([]);
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [matches, setMatches] = useState<Match[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
+  const [teams, setTeams] = useState<Team[]>([]);
   const [tournamentId, setTournamentId] = useState<string>("");
   const [gameId, setGameId] = useState<string>("");
   const [loading, setLoading] = useState(false);
@@ -26,6 +30,7 @@ const MatchesManagement = () => {
 
   useEffect(() => {
     fetchTournaments().then(setTournaments);
+    fetchUsers().then(setUsers);
   }, []);
 
   useEffect(() => {
@@ -38,19 +43,22 @@ const MatchesManagement = () => {
         setGames([]);
         setParticipants([]);
         setMatches([]);
+        setTeams([]);
         return;
       }
 
       setLoading(true);
       try {
-        const [gamesResponse, participantsResponse, matchesResponse] = await Promise.all([
+        const [gamesResponse, participantsResponse, matchesResponse, teamsResponse] = await Promise.all([
           fetchGames(tournamentId),
           fetchParticipants({ tournamentId, gameId: gameId || undefined }),
           fetchMatches({ tournamentId, gameId: gameId || undefined }),
+          fetchTeams({ tournamentId, gameId: gameId || undefined }),
         ]);
         setGames(gamesResponse);
         setParticipants(participantsResponse);
         setMatches(matchesResponse);
+        setTeams(teamsResponse);
       } catch (error: any) {
         toast({
           title: "Error loading data",
@@ -60,6 +68,7 @@ const MatchesManagement = () => {
         setGames([]);
         setParticipants([]);
         setMatches([]);
+        setTeams([]);
       } finally {
         setLoading(false);
       }
@@ -74,6 +83,31 @@ const MatchesManagement = () => {
       return acc;
     }, {});
   }, [participants]);
+
+  const usersMap = useMemo(() => {
+    return users.reduce<Record<string, User>>((acc, user) => {
+      acc[user.id] = user;
+      return acc;
+    }, {});
+  }, [users]);
+
+  const teamsMap = useMemo(() => {
+    return teams.reduce<Record<string, Team>>((acc, team) => {
+      acc[team.id] = team;
+      return acc;
+    }, {});
+  }, [teams]);
+
+  const getParticipantName = (participant?: Participant) => {
+    if (!participant) return "TBD";
+    if (participant.type === "USER" && participant.user_id) {
+      return usersMap[participant.user_id]?.name || "Unknown User";
+    }
+    if (participant.type === "TEAM" && participant.team_id) {
+      return teamsMap[participant.team_id]?.name || "Unknown Team";
+    }
+    return "Unknown Participant";
+  };
 
   const groupedMatches = useMemo(() => {
     return matches.reduce<Record<number, Match[]>>((groups, match) => {
@@ -224,26 +258,42 @@ const MatchesManagement = () => {
                             <p className="font-semibold">{match.round_name}</p>
                           </div>
                           <div className="space-y-2">
-                            <div className="flex items-center justify-between">
-                              <span>{participantA?.user_id || participantA?.team_id || "TBD"}</span>
+                            <div className={`flex items-center justify-between p-2 rounded-md ${match.status.toUpperCase() === 'COMPLETED'
+                                ? match.winner_participant_id === participantA?.id
+                                  ? "bg-green-100 dark:bg-green-900/30 border border-green-200 dark:border-green-800"
+                                  : "bg-red-100 dark:bg-red-900/30 border border-red-200 dark:border-red-800 opacity-70"
+                                : ""
+                              }`}>
+                              <span className="truncate max-w-[150px] font-medium" title={getParticipantName(participantA)}>
+                                {getParticipantName(participantA)}
+                              </span>
                               <Button
-                                variant="outline"
+                                variant={match.winner_participant_id === participantA?.id ? "default" : "outline"}
                                 size="sm"
-                                disabled={!participantA}
+                                disabled={!participantA || match.status.toUpperCase() === 'COMPLETED'}
                                 onClick={() => participantA && handleResult(match, participantA.id)}
+                                className={match.winner_participant_id === participantA?.id ? "bg-green-600 hover:bg-green-700 h-7" : "h-7"}
                               >
-                                Win
+                                {match.winner_participant_id === participantA?.id ? "Winner" : "Win"}
                               </Button>
                             </div>
-                            <div className="flex items-center justify-between">
-                              <span>{participantB?.user_id || participantB?.team_id || "TBD"}</span>
+                            <div className={`flex items-center justify-between p-2 rounded-md ${match.status.toUpperCase() === 'COMPLETED'
+                                ? match.winner_participant_id === participantB?.id
+                                  ? "bg-green-100 dark:bg-green-900/30 border border-green-200 dark:border-green-800"
+                                  : "bg-red-100 dark:bg-red-900/30 border border-red-200 dark:border-red-800 opacity-70"
+                                : ""
+                              }`}>
+                              <span className="truncate max-w-[150px] font-medium" title={getParticipantName(participantB)}>
+                                {getParticipantName(participantB)}
+                              </span>
                               <Button
-                                variant="outline"
+                                variant={match.winner_participant_id === participantB?.id ? "default" : "outline"}
                                 size="sm"
-                                disabled={!participantB}
+                                disabled={!participantB || match.status.toUpperCase() === 'COMPLETED'}
                                 onClick={() => participantB && handleResult(match, participantB.id)}
+                                className={match.winner_participant_id === participantB?.id ? "bg-green-600 hover:bg-green-700 h-7" : "h-7"}
                               >
-                                Win
+                                {match.winner_participant_id === participantB?.id ? "Winner" : "Win"}
                               </Button>
                             </div>
                           </div>
@@ -251,6 +301,7 @@ const MatchesManagement = () => {
                           <div className="grid grid-cols-2 gap-2">
                             <Input
                               type="datetime-local"
+                              disabled={match.status.toUpperCase() === 'COMPLETED'}
                               value={(() => {
                                 if (!match.match_time) return "";
                                 let date: Date;
@@ -273,6 +324,7 @@ const MatchesManagement = () => {
                             />
                             <Input
                               placeholder="Venue"
+                              disabled={match.status.toUpperCase() === 'COMPLETED'}
                               value={match.venue || ""}
                               onChange={(event) =>
                                 updateMatch(match.id, {

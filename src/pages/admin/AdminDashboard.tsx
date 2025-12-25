@@ -60,6 +60,7 @@ const AdminDashboard = () => {
               <Route path="/matches" element={<MatchesManagement />} />
               <Route path="/leaderboard" element={<LeaderboardManagement />} />
               <Route path="/users" element={<UsersManagement />} />
+              <Route path="/schedule" element={<MatchesSchedule />} />
             </Routes>
           </main>
         </div>
