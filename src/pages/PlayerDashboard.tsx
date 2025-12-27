@@ -12,6 +12,7 @@ import ProfileManagement from "./player/ProfileManagement";
 import GameRegistration from "./player/GameRegistration";
 import MyGames from "./player/MyGames";
 import MyMatches from "./player/MyMatches";
+import MyTournaments from "./player/MyTournaments";
 import Notifications from "./player/Notifications";
 import PlayerSchedule from "./player/PlayerSchedule";
 import { useState, useEffect } from "react";
@@ -325,6 +326,7 @@ const PlayerDashboard = () => {
               <Route path="matches" element={<MyMatches />} />
               <Route path="schedule" element={<PlayerSchedule />} />
               <Route path="notifications" element={<Notifications />} />
+              <Route path="tournaments" element={<MyTournaments />} />
               <Route path="profile" element={<ProfileManagement />} />
             </Routes>
           </main>

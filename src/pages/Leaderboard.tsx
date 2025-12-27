@@ -21,6 +21,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import TournamentBracket from "@/components/TournamentBracket";
 import { cn } from "@/lib/utils";
+import Navbar from "@/components/Navbar";
 
 const LeaderboardPage = () => {
   const [tournaments, setTournaments] = useState<any[]>([]);
@@ -59,18 +60,17 @@ const LeaderboardPage = () => {
       setGameId("");
       return;
     }
-    setLoading(true);
 
-    const loadData = async () => {
+    const loadTournamentData = async () => {
       try {
-        const [leaderboardData, matchesData, gamesData, participantsData, teamsData] = await Promise.all([
-          fetchLeaderboard(tournamentId, activeTab === 'standings' && gameId && gameId !== 'ALL' ? gameId : undefined),
+        setIsLoading(true);
+        const [matchesData, gamesData, participantsData, teamsData] = await Promise.all([
           fetchMatches({ tournamentId }),
           fetchGames(tournamentId),
           fetchParticipants({ tournamentId }),
           fetchTeams({ tournamentId })
         ]);
-        setEntries(leaderboardData);
+
         setMatches(matchesData);
         setGames(gamesData);
         setParticipants(participantsData);
@@ -83,21 +83,38 @@ const LeaderboardPage = () => {
         }
 
         if (gamesData.length > 0 && !gameId) {
-          setGameId(gamesData[0].id);
+          setGameId("ALL");
         }
       } catch (error) {
-        console.error("Error loading leaderboard data:", error);
+        console.error("Error loading tournament data:", error);
       } finally {
-        setLoading(false);
         setIsLoading(false);
       }
     };
 
-    if (tournamentId) {
-      setIsLoading(true);
-      loadData();
-    }
-  }, [tournamentId, gameId, activeTab, setIsLoading]);
+    loadTournamentData();
+  }, [tournamentId, setIsLoading]);
+
+  useEffect(() => {
+    if (!tournamentId) return;
+
+    const loadLeaderboardData = async () => {
+      setLoading(true);
+      try {
+        const leaderboardData = await fetchLeaderboard(
+          tournamentId,
+          activeTab === 'standings' && gameId && gameId !== 'ALL' ? gameId : undefined
+        );
+        setEntries(leaderboardData);
+      } catch (error) {
+        console.error("Error loading leaderboard data:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadLeaderboardData();
+  }, [tournamentId, gameId, activeTab]);
 
   useEffect(() => {
     if (activeTab === "bracket" && gameId === "ALL" && games.length > 0) {
@@ -153,7 +170,8 @@ const LeaderboardPage = () => {
   const tableEntries = entries.slice(3);
 
   return (
-    <div className="min-h-screen bg-muted/30 py-12">
+    <div className="min-h-screen bg-muted/30 pt-20 md:pt-24 pb-12">
+      <Navbar />
       <div className="container space-y-8">
         <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between border-b pb-8">
           <div className="space-y-2">
@@ -171,7 +189,7 @@ const LeaderboardPage = () => {
               <p className="text-[10px] uppercase text-muted-foreground font-black tracking-widest mb-1.5 opacity-70">
                 ACTIVE TOURNAMENT
               </p>
-              <Select value={tournamentId} onValueChange={setTournamentId}>
+              <Select value={tournamentId} onValueChange={setTournamentId} >
                 <SelectTrigger className="bg-background border-muted-foreground/20 h-11">
                   <SelectValue placeholder="Select tournament" />
                 </SelectTrigger>
@@ -185,7 +203,7 @@ const LeaderboardPage = () => {
               </Select>
             </div>
 
-            <div className="w-full md:w-64 animate-in fade-in slide-in-from-right-2">
+            <div className="w-full md:w-64">
               <p className="text-[10px] uppercase text-muted-foreground font-black tracking-widest mb-1.5 opacity-70">
                 {activeTab === 'standings' ? 'FILTER STANDINGS' : 'SELECT GAME'}
               </p>
@@ -220,7 +238,7 @@ const LeaderboardPage = () => {
             </TabsList>
           </div>
 
-          <TabsContent value="standings" className="space-y-8 animate-in fade-in duration-500">
+          <TabsContent value="standings" className="space-y-8 animate-in fade-in duration-500 min-h-[500px]">
             <div className="grid gap-6">
               <Card className="border-none shadow-xl bg-gradient-to-b from-card to-card/50">
                 <CardHeader className="flex flex-row items-center justify-between border-b bg-muted/10 p-6 px-8">
