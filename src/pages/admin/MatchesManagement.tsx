@@ -8,6 +8,7 @@ import { fetchTournaments } from "@/services/firestore/tournaments";
 import { fetchGames } from "@/services/firestore/games";
 import { fetchParticipants } from "@/services/firestore/participants";
 import { fetchMatches, updateMatch, submitMatchResult } from "@/services/firestore/matches";
+import { recordMatchResultToLeaderboard } from "@/services/firestore/leaderboard";
 import { Participant, Match, Team } from "@/types/tournament";
 import { generateSingleEliminationBracket, persistGeneratedMatches } from "@/lib/bracket";
 import { useToast } from "@/hooks/use-toast";
@@ -109,6 +110,40 @@ const MatchesManagement = () => {
     return "Unknown Participant";
   };
 
+  const eliminatedUserIds = useMemo(() => {
+    const eliminatedUsers = new Set<string>();
+    matches
+      .filter(m => m.status.toUpperCase() === 'COMPLETED')
+      .forEach(m => {
+        const loserId = m.participant_a_id === m.winner_participant_id ? m.participant_b_id : m.participant_a_id;
+        if (loserId) {
+          const loserParticipant = participants.find(p => p.id === loserId);
+          if (loserParticipant) {
+            if (loserParticipant.type === 'USER' && loserParticipant.user_id) {
+              eliminatedUsers.add(loserParticipant.user_id);
+            } else if (loserParticipant.type === 'TEAM' && loserParticipant.team_id) {
+              const team = teams.find(t => t.id === loserParticipant.team_id);
+              if (team?.player_ids) {
+                team.player_ids.forEach(uid => eliminatedUsers.add(uid));
+              }
+            }
+          }
+        }
+      });
+    return eliminatedUsers;
+  }, [matches, participants, teams]);
+
+  const activeParticipants = useMemo(() => {
+    return participants.filter(p => {
+      if (p.type === 'USER' && p.user_id && eliminatedUserIds.has(p.user_id)) return false;
+      if (p.type === 'TEAM' && p.team_id) {
+        const team = teams.find(t => t.id === p.team_id);
+        if (team?.player_ids?.some(uid => eliminatedUserIds.has(uid))) return false;
+      }
+      return true;
+    });
+  }, [participants, teams, eliminatedUserIds]);
+
   const groupedMatches = useMemo(() => {
     return matches.reduce<Record<number, Match[]>>((groups, match) => {
       if (!groups[match.round_index]) {
@@ -140,7 +175,7 @@ const MatchesManagement = () => {
 
     try {
       setLoading(true);
-      const generated = generateSingleEliminationBracket(participants);
+      const generated = generateSingleEliminationBracket(activeParticipants);
       await persistGeneratedMatches(tournamentId, gameId, generated);
       const refreshed = await fetchMatches({ tournamentId, gameId });
       setMatches(refreshed);
@@ -170,6 +205,25 @@ const MatchesManagement = () => {
             ? { participant_a_id: winnerId }
             : { participant_b_id: winnerId }
         );
+      }
+
+      // Update Leaderboard
+      const winnerParticipant = participantsMap[winnerId];
+      const loserId = match.participant_a_id === winnerId ? match.participant_b_id : match.participant_a_id;
+      const loserParticipant = loserId ? participantsMap[loserId] : undefined;
+
+      if (winnerParticipant) {
+        await recordMatchResultToLeaderboard({
+          tournamentId: match.tournament_id,
+          gameId: match.game_id,
+          winnerId: winnerId,
+          loserId: loserId,
+          winnerName: getParticipantName(winnerParticipant),
+          loserName: loserParticipant ? getParticipantName(loserParticipant) : undefined,
+          winnerType: winnerParticipant.type,
+          loserType: loserParticipant?.type,
+          pointsForWin: 3,
+        });
       }
 
       const refreshed = await fetchMatches({ tournamentId, gameId: gameId || undefined });
@@ -259,10 +313,10 @@ const MatchesManagement = () => {
                           </div>
                           <div className="space-y-2">
                             <div className={`flex items-center justify-between p-2 rounded-md ${match.status.toUpperCase() === 'COMPLETED'
-                                ? match.winner_participant_id === participantA?.id
-                                  ? "bg-green-100 dark:bg-green-900/30 border border-green-200 dark:border-green-800"
-                                  : "bg-red-100 dark:bg-red-900/30 border border-red-200 dark:border-red-800 opacity-70"
-                                : ""
+                              ? match.winner_participant_id === participantA?.id
+                                ? "bg-green-100 dark:bg-green-900/30 border border-green-200 dark:border-green-800"
+                                : "bg-red-100 dark:bg-red-900/30 border border-red-200 dark:border-red-800 opacity-70"
+                              : ""
                               }`}>
                               <span className="truncate max-w-[150px] font-medium" title={getParticipantName(participantA)}>
                                 {getParticipantName(participantA)}
@@ -278,10 +332,10 @@ const MatchesManagement = () => {
                               </Button>
                             </div>
                             <div className={`flex items-center justify-between p-2 rounded-md ${match.status.toUpperCase() === 'COMPLETED'
-                                ? match.winner_participant_id === participantB?.id
-                                  ? "bg-green-100 dark:bg-green-900/30 border border-green-200 dark:border-green-800"
-                                  : "bg-red-100 dark:bg-red-900/30 border border-red-200 dark:border-red-800 opacity-70"
-                                : ""
+                              ? match.winner_participant_id === participantB?.id
+                                ? "bg-green-100 dark:bg-green-900/30 border border-green-200 dark:border-green-800"
+                                : "bg-red-100 dark:bg-red-900/30 border border-red-200 dark:border-red-800 opacity-70"
+                              : ""
                               }`}>
                               <span className="truncate max-w-[150px] font-medium" title={getParticipantName(participantB)}>
                                 {getParticipantName(participantB)}

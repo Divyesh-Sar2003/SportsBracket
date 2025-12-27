@@ -272,11 +272,53 @@ const MatchesSchedule = () => {
         });
     }, [participants, isSinglePlayer]);
 
+    const eliminatedUserIds = useMemo(() => {
+        if (!selectedGameId) return new Set<string>();
+        const eliminatedUsers = new Set<string>();
+        matches
+            .filter(m => m.game_id === selectedGameId && m.status?.toUpperCase() === 'COMPLETED')
+            .forEach(m => {
+                const loserId = m.participant_a_id === m.winner_participant_id ? m.participant_b_id : m.participant_a_id;
+                if (loserId) {
+                    const loserParticipant = participants.find(p => p.id === loserId);
+                    if (loserParticipant) {
+                        if (loserParticipant.type === 'USER' && loserParticipant.user_id) {
+                            eliminatedUsers.add(loserParticipant.user_id);
+                        } else if (loserParticipant.type === 'TEAM' && loserParticipant.team_id) {
+                            const team = teams.find(t => t.id === loserParticipant.team_id);
+                            if (team?.player_ids) {
+                                team.player_ids.forEach(uid => eliminatedUsers.add(uid));
+                            }
+                        }
+                    }
+                }
+            });
+        return eliminatedUsers;
+    }, [matches, selectedGameId, participants, teams]);
+
+    const eliminatedParticipantIds = useMemo(() => {
+        if (!selectedGameId) return new Set<string>();
+        const eliminated = new Set<string>();
+
+        // Identify participants that include eliminated users
+        participants.forEach(p => {
+            if (p.type === 'USER' && p.user_id && eliminatedUserIds.has(p.user_id)) {
+                eliminated.add(p.id);
+            } else if (p.type === 'TEAM' && p.team_id) {
+                const team = teams.find(t => t.id === p.team_id);
+                if (team?.player_ids?.some(uid => eliminatedUserIds.has(uid))) {
+                    eliminated.add(p.id);
+                }
+            }
+        });
+        return eliminated;
+    }, [participants, teams, eliminatedUserIds]);
+
     const scheduledParticipantIds = useMemo(() => {
         if (!selectedGameId) return new Set<string>();
         const scheduled = new Set<string>();
         matches
-            .filter(m => m.game_id === selectedGameId && m.status?.toUpperCase() !== 'CANCELLED')
+            .filter(m => m.game_id === selectedGameId && m.status?.toUpperCase() === 'SCHEDULED')
             .forEach(m => {
                 if (m.participant_a_id) scheduled.add(m.participant_a_id);
                 if (m.participant_b_id) scheduled.add(m.participant_b_id);
@@ -464,14 +506,16 @@ const MatchesSchedule = () => {
                                         <SelectContent>
                                             {availableParticipants.map(p => {
                                                 const isScheduled = scheduledParticipantIds.has(p.id);
+                                                const isEliminated = eliminatedParticipantIds.has(p.id);
                                                 return (
                                                     <SelectItem
                                                         key={p.id}
                                                         value={p.id}
-                                                        disabled={isScheduled}
+                                                        disabled={isScheduled || isEliminated}
                                                     >
                                                         {getResolvedParticipantNameFromObject(p)}
                                                         {isScheduled && " (Already Scheduled)"}
+                                                        {isEliminated && " (Eliminated)"}
                                                     </SelectItem>
                                                 );
                                             })}
@@ -487,14 +531,16 @@ const MatchesSchedule = () => {
                                         <SelectContent>
                                             {availableParticipants.filter(p => p.id !== participantAId).map(p => {
                                                 const isScheduled = scheduledParticipantIds.has(p.id);
+                                                const isEliminated = eliminatedParticipantIds.has(p.id);
                                                 return (
                                                     <SelectItem
                                                         key={p.id}
                                                         value={p.id}
-                                                        disabled={isScheduled}
+                                                        disabled={isScheduled || isEliminated}
                                                     >
                                                         {getResolvedParticipantNameFromObject(p)}
                                                         {isScheduled && " (Already Scheduled)"}
+                                                        {isEliminated && " (Eliminated)"}
                                                     </SelectItem>
                                                 );
                                             })}

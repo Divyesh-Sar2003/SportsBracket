@@ -92,6 +92,7 @@ export interface MatchResult extends Timestamped {
 export interface LeaderboardEntry extends Timestamped {
   id: string;
   tournament_id: string;
+  game_id?: string;
   entity_type: "USER" | "TEAM" | "DEPARTMENT";
   entity_id: string;
   name: string;

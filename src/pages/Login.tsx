@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useLoading } from "@/contexts/LoadingContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -23,6 +24,7 @@ const Login = () => {
   const [forgotLoading, setForgotLoading] = useState(false);
   const [otpLoading, setOtpLoading] = useState(false);
   const { signIn, signInWithGoogle, user } = useAuth();
+  const { setIsLoading } = useLoading();
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -35,6 +37,7 @@ const Login = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    setIsLoading(true);
 
     try {
       const { error } = await signIn(email, password);
@@ -54,11 +57,13 @@ const Login = () => {
       });
     } finally {
       setLoading(false);
+      setIsLoading(false);
     }
   };
 
   const handleGoogleSignIn = async () => {
     setLoading(true);
+    setIsLoading(true);
     try {
       const { error, isNewUser } = await signInWithGoogle();
 

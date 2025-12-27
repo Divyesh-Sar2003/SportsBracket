@@ -82,7 +82,7 @@ define(['./workbox-5a5d9309'], (function (workbox) { 'use strict';
     "revision": "6ad762030cdfe725eaebb4b6eb8844f6"
   }, {
     "url": "/SportsBracket/index.html",
-    "revision": "0.hknim6ad71g"
+    "revision": "0.afadrfldroo"
   }], {});
   workbox.cleanupOutdatedCaches();
   workbox.registerRoute(new workbox.NavigationRoute(workbox.createHandlerBoundToURL("/SportsBracket/index.html"), {

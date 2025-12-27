@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useLoading } from "@/contexts/LoadingContext";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,7 +9,7 @@ import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { doc, getDoc, updateDoc, serverTimestamp } from "firebase/firestore";
-import { updatePassword, reauthenticateWithCredential, EmailAuthProvider } from "firebase/auth";
+import { updatePassword, reauthenticateWithCredential, EmailAuthProvider, linkWithCredential } from "firebase/auth";
 import { db, auth } from "@/integrations/firebase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
@@ -24,7 +25,7 @@ const profileSchema = z.object({
 });
 
 const passwordSchema = z.object({
-  currentPassword: z.string().min(1, "Current password is required"),
+  currentPassword: z.string().optional(),
   newPassword: z.string().min(6, "New password must be at least 6 characters"),
   confirmPassword: z.string().min(6, "Please confirm your new password"),
 }).refine((data) => data.newPassword === data.confirmPassword, {
@@ -42,6 +43,7 @@ const ProfileManagement = () => {
   const [updatingProfile, setUpdatingProfile] = useState(false);
   const [changingPassword, setChangingPassword] = useState(false);
   const [hasPasswordProvider, setHasPasswordProvider] = useState(false);
+  const { setIsLoading } = useLoading();
 
   const profileForm = useForm<ProfileFormData>({
     resolver: zodResolver(profileSchema),
@@ -53,12 +55,13 @@ const ProfileManagement = () => {
 
   useEffect(() => {
     if (user) {
+      setIsLoading(true);
       fetchProfile();
       // Check if user has password provider
       const hasPassword = user.providerData.some(provider => provider.providerId === 'password');
       setHasPasswordProvider(hasPassword);
     }
-  }, [user]);
+  }, [user, setIsLoading]);
 
   const fetchProfile = async () => {
     try {
@@ -81,6 +84,7 @@ const ProfileManagement = () => {
       });
     } finally {
       setProfileLoading(false);
+      setIsLoading(false);
     }
   };
 
@@ -88,6 +92,7 @@ const ProfileManagement = () => {
     if (!user) return;
 
     setUpdatingProfile(true);
+    setIsLoading(true);
     try {
       await updateDoc(doc(db, "profiles", user.uid), {
         ...data,
@@ -107,6 +112,7 @@ const ProfileManagement = () => {
       });
     } finally {
       setUpdatingProfile(false);
+      setIsLoading(false);
     }
   };
 
@@ -114,17 +120,30 @@ const ProfileManagement = () => {
     if (!user || !user.email) return;
 
     setChangingPassword(true);
+    setIsLoading(true);
     try {
-      // Reauthenticate user
-      const credential = EmailAuthProvider.credential(user.email, data.currentPassword);
-      await reauthenticateWithCredential(user, credential);
+      if (hasPasswordProvider) {
+        if (!data.currentPassword) {
+          passwordForm.setError("currentPassword", { message: "Current password is required" });
+          setChangingPassword(false);
+          return;
+        }
+        // Reauthenticate user
+        const credential = EmailAuthProvider.credential(user.email, data.currentPassword);
+        await reauthenticateWithCredential(user, credential);
 
-      // Update password
-      await updatePassword(user, data.newPassword);
+        // Update password
+        await updatePassword(user, data.newPassword);
+      } else {
+        // Link with email password credential for Google users
+        const credential = EmailAuthProvider.credential(user.email, data.newPassword);
+        await linkWithCredential(user, credential);
+        setHasPasswordProvider(true);
+      }
 
       toast({
         title: "Success",
-        description: "Password changed successfully",
+        description: hasPasswordProvider ? "Password changed successfully" : "Password set successfully",
       });
 
       passwordForm.reset();
@@ -135,6 +154,8 @@ const ProfileManagement = () => {
         errorMessage = "Current password is incorrect";
       } else if (error.code === "auth/weak-password") {
         errorMessage = "New password is too weak";
+      } else if (error.code === "auth/requires-recent-login") {
+        errorMessage = "Please login again to change password";
       }
       toast({
         title: "Error",
@@ -143,6 +164,7 @@ const ProfileManagement = () => {
       });
     } finally {
       setChangingPassword(false);
+      setIsLoading(false);
     }
   };
 
@@ -240,23 +262,29 @@ const ProfileManagement = () => {
         {/* Change Password */}
         <Card>
           <CardHeader>
-            <CardTitle>Change Password</CardTitle>
-            <CardDescription>Update your account password</CardDescription>
+            <CardTitle>{hasPasswordProvider ? "Change Password" : "Set Password"}</CardTitle>
+            <CardDescription>
+              {hasPasswordProvider
+                ? "Update your account password"
+                : "Create a password for your account to login with email"}
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={passwordForm.handleSubmit(onPasswordSubmit)} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="currentPassword">Current Password</Label>
-                <Input
-                  id="currentPassword"
-                  type="password"
-                  {...passwordForm.register("currentPassword")}
-                  placeholder="Enter current password"
-                />
-                {passwordForm.formState.errors.currentPassword && (
-                  <p className="text-sm text-red-500">{passwordForm.formState.errors.currentPassword.message}</p>
-                )}
-              </div>
+              {hasPasswordProvider && (
+                <div className="space-y-2">
+                  <Label htmlFor="currentPassword">Current Password</Label>
+                  <Input
+                    id="currentPassword"
+                    type="password"
+                    {...passwordForm.register("currentPassword")}
+                    placeholder="Enter current password"
+                  />
+                  {passwordForm.formState.errors.currentPassword && (
+                    <p className="text-sm text-red-500">{passwordForm.formState.errors.currentPassword.message}</p>
+                  )}
+                </div>
+              )}
 
               <div className="space-y-2">
                 <Label htmlFor="newPassword">New Password</Label>
@@ -286,7 +314,7 @@ const ProfileManagement = () => {
 
               <Button type="submit" disabled={changingPassword}>
                 {changingPassword && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Change Password
+                {hasPasswordProvider ? "Change Password" : "Set Password"}
               </Button>
             </form>
           </CardContent>
