@@ -1,8 +1,10 @@
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { Trophy, Users, Calendar, Zap, ArrowRight } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
 
 const Hero = () => {
+  const { user } = useAuth();
   return (
     <section className="relative overflow-hidden bg-gradient-to-br from-primary via-secondary to-accent py-16 md:py-24 lg:py-32">
       <div className="container relative z-10 px-4 md:px-6">
@@ -26,21 +28,21 @@ const Hero = () => {
           </p>
 
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center animate-scale-in px-4 md:px-0">
-            <Link to="/register" className="w-full sm:w-auto">
-              <Button
-                size="lg"
-                className="w-full sm:w-auto bg-gradient-to-r from-accent to-warning hover:from-warning hover:to-accent text-white font-bold shadow-2xl hover:shadow-accent/50 hover:scale-110 transition-all group"
-              >
-                Register Now
-                <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
-              </Button>
-            </Link>
+            {!user && (
+              <Link to="/register" className="w-full sm:w-auto">
+                <Button
+                  size="lg"
+                  className="w-full sm:w-auto bg-gradient-to-r from-accent to-warning hover:from-warning hover:to-accent text-white font-bold shadow-2xl hover:shadow-accent/50 hover:scale-110 transition-all group" >
+                  Register Now
+                  <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
+                </Button>
+              </Link>
+            )}
             <Link to="/leaderboard" className="w-full sm:w-auto">
               <Button
                 size="lg"
                 variant="outline"
-                className="w-full sm:w-auto glass-card border-white/30 text-white hover:bg-white/20 hover:scale-105 transition-all font-semibold"
-              >
+                className="w-full sm:w-auto glass-card border-black/30 text-black hover:bg-white/20 hover:text-black hover:scale-105 transition-all font-bold" >
                 View Leaderboard
               </Button>
             </Link>

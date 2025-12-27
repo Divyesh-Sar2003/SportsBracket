@@ -79,13 +79,13 @@ define(['./workbox-5a5d9309'], (function (workbox) { 'use strict';
    */
   workbox.precacheAndRoute([{
     "url": "registerSW.js",
-    "revision": "6ad762030cdfe725eaebb4b6eb8844f6"
+    "revision": "3ca0b8505b4bec776b69afdba2768812"
   }, {
-    "url": "/SportsBracket/index.html",
-    "revision": "0.afadrfldroo"
+    "url": "/index.html",
+    "revision": "0.v51gcs0tjeg"
   }], {});
   workbox.cleanupOutdatedCaches();
-  workbox.registerRoute(new workbox.NavigationRoute(workbox.createHandlerBoundToURL("/SportsBracket/index.html"), {
+  workbox.registerRoute(new workbox.NavigationRoute(workbox.createHandlerBoundToURL("/index.html"), {
     allowlist: [/^\/$/],
     denylist: [/^\/api/]
   }));

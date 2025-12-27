@@ -16,25 +16,10 @@ const Footer = () => {
               Built for Sports Week 2025.
             </p>
           </div>
-          
+
           <div>
             <h3 className="font-semibold text-foreground mb-4">Quick Links</h3>
             <ul className="space-y-2 text-sm">
-              <li>
-                <Link to="/games" className="text-muted-foreground hover:text-primary transition-colors">
-                  Games
-                </Link>
-              </li>
-              <li>
-                <Link to="/schedule" className="text-muted-foreground hover:text-primary transition-colors">
-                  Schedule
-                </Link>
-              </li>
-              <li>
-                <Link to="/results" className="text-muted-foreground hover:text-primary transition-colors">
-                  Results
-                </Link>
-              </li>
               <li>
                 <Link to="/leaderboard" className="text-muted-foreground hover:text-primary transition-colors">
                   Leaderboard
@@ -42,7 +27,7 @@ const Footer = () => {
               </li>
             </ul>
           </div>
-          
+
           <div>
             <h3 className="font-semibold text-foreground mb-4">Account</h3>
             <ul className="space-y-2 text-sm">
@@ -59,7 +44,7 @@ const Footer = () => {
             </ul>
           </div>
         </div>
-        
+
         <div className="mt-8 pt-8 border-t border-border text-center text-sm text-muted-foreground">
           © 2025 SportsBracket. Sports Week Tournament Management System.
         </div>

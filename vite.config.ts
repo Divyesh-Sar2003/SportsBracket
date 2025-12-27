@@ -11,7 +11,7 @@ export default defineConfig(({ mode }) => ({
     host: "::",
     port: 8080,
   },
-  base: "/SportsBracket/",
+  base: "/",
   plugins: [
     react(),
     mode === "development" && componentTagger(),
@@ -42,7 +42,7 @@ export default defineConfig(({ mode }) => ({
         enabled: true
       },
       workbox: {
-        navigateFallback: '/SportsBracket/index.html',
+        navigateFallback: '/index.html',
         navigateFallbackDenylist: [/^\/api/],
         globPatterns: ['**/*.{js,css,html,ico,png,svg}']
       }

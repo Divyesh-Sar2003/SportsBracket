@@ -9,6 +9,7 @@ import { fetchMatches } from "@/services/firestore/matches";
 import { fetchParticipants } from "@/services/firestore/participants";
 import { Match, Participant } from "@/types/tournament";
 import { Loader2, MapPin, Clock } from "lucide-react";
+import Navbar from "@/components/Navbar";
 
 const formatDateTime = (value?: string) => {
   if (!value) return "TBD";
@@ -73,7 +74,8 @@ const SchedulePage = () => {
   const upcomingMatches = matches.filter((match) => match.status !== "COMPLETED");
 
   return (
-    <div className="min-h-screen bg-muted/30 py-12">
+    <div className="min-h-screen bg-muted/30 pt-20 md:pt-24 pb-12">
+      <Navbar />
       <div className="container space-y-8">
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
@@ -92,7 +94,7 @@ const SchedulePage = () => {
                   <SelectValue placeholder="Select tournament" />
                 </SelectTrigger>
                 <SelectContent>
-                  {tournaments.map((tournament) => (
+                  {tournaments.map((tournament) => tournament.id && (
                     <SelectItem value={tournament.id} key={tournament.id}>
                       {tournament.name}
                     </SelectItem>
@@ -108,7 +110,7 @@ const SchedulePage = () => {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="">All games</SelectItem>
-                  {games.map((game) => (
+                  {games.map((game) => game.id && (
                     <SelectItem value={game.id} key={game.id}>
                       {game.name}
                     </SelectItem>

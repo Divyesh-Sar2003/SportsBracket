@@ -319,9 +319,8 @@
   border: 1px solid hsl(var(--border));
   overflow-x: auto;
   overflow-y: hidden;
-  display: flex;
-  flex-direction: column;
-  max-height: calc(100vh - 250px);
+  height: calc(100vh - 350px);
+  max-height: 600px;
   min-height: 400px;
   -webkit-overflow-scrolling: touch;
   position: relative;
@@ -349,6 +348,8 @@
   min-width: 1100px;
   /* Force slider on smaller screens */
   border-collapse: collapse;
+  display: flex;
+  flex-direction: column;
   height: 100%;
 }
 
@@ -413,12 +414,22 @@
 }
 
 .users-table tbody {
+  display: block;
+  overflow-y: auto;
+  overflow-x: hidden;
   flex: 1;
+  max-height: 100%;
 }
 
-.users-table tbody tr {
-  border-bottom: 1px solid hsl(var(--border));
-  transition: var(--transition-fast);
+/* Custom scrollbar for tbody */
+.users-table tbody::-webkit-scrollbar {
+  width: 8px;
+}
+
+.users-table tbody::-webkit-scrollbar-track {
+  background: hsl(var(--muted)/0.2);
+  border-radius: 10px;
+  margin: 4px 0;
 }
 
 .users-table tbody::-webkit-scrollbar-thumb {
@@ -627,6 +638,8 @@
 
   .table-container {
     border-radius: var(--radius-lg);
+    height: calc(100vh - 450px);
+    min-height: 300px;
   }
 
   .users-table th,
@@ -650,13 +663,9 @@
 /* Landscape Mode Optimization */
 @media (max-height: 700px) and (orientation: landscape) {
   .table-container {
-    max-height: calc(100vh - 200px);
+    height: calc(100vh - 200px);
+    max-height: 450px;
     min-height: 280px;
-  }
-
-  .users-table tbody {
-    max-height: calc(100vh - 250px);
-    min-height: 230px;
   }
 
   .header-content h1 {
