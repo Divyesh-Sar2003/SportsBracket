@@ -5,20 +5,42 @@ import { useAuth } from "@/contexts/AuthContext";
 import { fetchRegistrations } from "@/services/firestore/registrations";
 import { fetchGames } from "@/services/firestore/games";
 import { fetchTournaments } from "@/services/firestore/tournaments";
-import { Registration, Game, Tournament } from "@/types/tournament";
-import { Loader2, Trophy, Users, Calendar, CheckCircle2, Clock, XCircle } from "lucide-react";
+import { fetchTeams } from "@/services/firestore/teams";
+import { Registration, Game, Tournament, Team } from "@/types/tournament";
+import { Loader2, Trophy, Users, Calendar, CheckCircle2, Clock, XCircle, UserPlus, Shield } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+
+import { fetchUsers, User } from "@/services/firestore/users";
 
 const MyGames = () => {
     const { user } = useAuth();
     const { toast } = useToast();
 
     const [registrations, setRegistrations] = useState<Registration[]>([]);
+    const [teams, setTeams] = useState<Team[]>([]);
     const [games, setGames] = useState<Game[]>([]);
     const [tournaments, setTournaments] = useState<Tournament[]>([]);
+    const [users, setUsers] = useState<User[]>([]);
     const [loading, setLoading] = useState(true);
+
+    const formatDate = (date: any) => {
+        if (!date) return "N/A";
+        let d: Date;
+        if (typeof date === 'object' && date.toDate) {
+            d = date.toDate();
+        } else if (typeof date === 'object' && date.seconds) {
+            d = new Date(date.seconds * 1000);
+        } else {
+            d = new Date(date);
+        }
+        if (isNaN(d.getTime())) return "N/A";
+        const day = String(d.getDate()).padStart(2, '0');
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const year = d.getFullYear();
+        return `${day}/${month}/${year}`;
+    };
 
     useEffect(() => {
         const loadData = async () => {
@@ -27,10 +49,12 @@ const MyGames = () => {
             setLoading(true);
             try {
                 // Fetch all data
-                const [allRegistrations, allGames, allTournaments] = await Promise.all([
+                const [allRegistrations, allGames, allTournaments, allTeams, allUsers] = await Promise.all([
                     fetchRegistrations({}),
                     fetchGames(),
                     fetchTournaments(),
+                    fetchTeams({ userId: user.uid }),
+                    fetchUsers()
                 ]);
 
                 // Filter registrations for current user
@@ -39,6 +63,8 @@ const MyGames = () => {
                 setRegistrations(userRegistrations);
                 setGames(allGames);
                 setTournaments(allTournaments);
+                setTeams(allTeams);
+                setUsers(allUsers);
             } catch (error) {
                 console.error("Error loading data:", error);
                 toast({
@@ -56,6 +82,7 @@ const MyGames = () => {
 
     const getGame = (gameId: string) => games.find(g => g.id === gameId);
     const getTournament = (tournamentId: string) => tournaments.find(t => t.id === tournamentId);
+    const getUserName = (userId: string) => users.find(u => u.id === userId)?.name || "Unknown User";
 
     const getGameTypeLabel = (type: string) => {
         switch (type) {
@@ -124,7 +151,7 @@ const MyGames = () => {
                                     <span className="text-muted-foreground">Start:</span>
                                 </div>
                                 <span className="font-medium">
-                                    {new Date(tournament.start_date).toLocaleDateString()}
+                                    {formatDate(tournament.start_date)}
                                 </span>
                             </>
                         )}
@@ -139,10 +166,7 @@ const MyGames = () => {
                     )}
 
                     <div className="pt-2 text-xs text-muted-foreground">
-                        Registered on {registration.created_at
-                            ? new Date((registration.created_at as any).toDate?.() || registration.created_at).toLocaleDateString()
-                            : 'N/A'
-                        }
+                        Registered on {formatDate(registration.created_at)}
                     </div>
                 </CardContent>
             </Card>
@@ -166,21 +190,24 @@ const MyGames = () => {
                 </p>
             </div>
 
-            {registrations.length === 0 ? (
+            {registrations.length === 0 && teams.length === 0 ? (
                 <Card>
                     <CardContent className="pt-6">
                         <Alert>
                             <AlertDescription className="text-center">
-                                You haven't registered for any games yet. Visit the <strong>Register for Games</strong> page to get started!
+                                You haven't registered for any games or joined any teams yet. Visit the <strong>Register for Games</strong> page to get started!
                             </AlertDescription>
                         </Alert>
                     </CardContent>
                 </Card>
             ) : (
                 <Tabs defaultValue="all" className="space-y-4">
-                    <TabsList className="grid w-full grid-cols-4 max-w-md">
+                    <TabsList className="grid w-full grid-cols-5 max-w-3xl">
                         <TabsTrigger value="all">
                             All ({registrations.length})
+                        </TabsTrigger>
+                        <TabsTrigger value="teams">
+                            Teams ({teams.length})
                         </TabsTrigger>
                         <TabsTrigger value="pending">
                             Pending ({pendingRegistrations.length})
@@ -203,6 +230,72 @@ const MyGames = () => {
                                 {registrations.map(registration => (
                                     <RegistrationCard key={registration.id} registration={registration} />
                                 ))}
+                            </div>
+                        )}
+                    </TabsContent>
+
+                    <TabsContent value="teams" className="space-y-4">
+                        {teams.length === 0 ? (
+                            <Alert>
+                                <AlertDescription>You are not part of any teams yet.</AlertDescription>
+                            </Alert>
+                        ) : (
+                            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                                {teams.map(team => {
+                                    const tournament = getTournament(team.tournament_id);
+                                    const game = getGame(team.game_id);
+                                    const teamMembers = team.player_ids
+                                        .filter(id => id !== user?.uid)
+                                        .map(id => getUserName(id));
+
+                                    return (
+                                        <Card key={team.id}>
+                                            <CardHeader>
+                                                <div className="flex items-start justify-between">
+                                                    <div className="space-y-1">
+                                                        <CardTitle className="text-lg">{team.name}</CardTitle>
+                                                        <CardDescription className="flex items-center gap-2">
+                                                            <Trophy className="h-4 w-4" />
+                                                            {tournament?.name} - {game?.name}
+                                                        </CardDescription>
+                                                    </div>
+                                                    <Badge variant={team.status === 'confirmed' ? "default" : "secondary"}>
+                                                        {team.status}
+                                                    </Badge>
+                                                </div>
+                                            </CardHeader>
+                                            <CardContent className="space-y-4">
+                                                <div className="flex items-center gap-2 text-sm">
+                                                    <div className="flex items-center gap-2 text-muted-foreground min-w-[60px]">
+                                                        <Users className="h-4 w-4" />
+                                                        <span>Type:</span>
+                                                    </div>
+                                                    <span className="font-medium">{team.is_pair ? "Pair" : "Team"}</span>
+                                                </div>
+
+                                                <div className="space-y-2">
+                                                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                                        <UserPlus className="h-4 w-4" />
+                                                        <span>Teammates:</span>
+                                                    </div>
+                                                    {teamMembers.length > 0 ? (
+                                                        <div className="flex flex-wrap gap-2 pl-6">
+                                                            {teamMembers.map((name, index) => (
+                                                                <Badge key={index} variant="outline" className="bg-muted/50">
+                                                                    {name}
+                                                                </Badge>
+                                                            ))}
+                                                        </div>
+                                                    ) : (
+                                                        <span className="text-sm text-muted-foreground pl-6 italic">
+                                                            No other members yet
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            </CardContent>
+                                        </Card>
+                                    )
+                                })}
                             </div>
                         )}
                     </TabsContent>

@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useLoading } from "@/contexts/LoadingContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -37,10 +38,12 @@ const GamesManagement = () => {
     tournament_id: ""
   });
   const { toast } = useToast();
+  const { setIsLoading } = useLoading();
 
   useEffect(() => {
+    setIsLoading(true);
     loadTournaments();
-  }, []);
+  }, [setIsLoading]);
 
   useEffect(() => {
     if (selectedTournamentId) {
@@ -63,12 +66,14 @@ const GamesManagement = () => {
         description: error.message,
         variant: "destructive"
       });
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const loadGames = async () => {
     if (!selectedTournamentId) return;
-    
+
     try {
       setLoading(true);
       const data = await fetchGames(selectedTournamentId);
@@ -81,6 +86,7 @@ const GamesManagement = () => {
       });
     } finally {
       setLoading(false);
+      setIsLoading(false);
     }
   };
 
@@ -97,6 +103,7 @@ const GamesManagement = () => {
     }
 
     try {
+      setIsLoading(true);
       if (editingId) {
         await updateDoc(doc(db, "games", editingId), {
           ...formData,
@@ -114,13 +121,16 @@ const GamesManagement = () => {
 
       setDialogOpen(false);
       resetForm();
-      loadGames();
+      const data = await fetchGames(selectedTournamentId);
+      setGames(data);
     } catch (error: any) {
       toast({
         title: "Error",
         description: error.message,
         variant: "destructive"
       });
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -140,23 +150,27 @@ const GamesManagement = () => {
     if (!confirm("Are you sure you want to delete this game?")) return;
 
     try {
+      setIsLoading(true);
       await deleteDoc(doc(db, "games", id));
       toast({ title: "Game deleted successfully" });
-      loadGames();
+      const data = await fetchGames(selectedTournamentId);
+      setGames(data);
     } catch (error: any) {
       toast({
         title: "Error",
         description: error.message,
         variant: "destructive"
       });
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const resetForm = () => {
-    setFormData({ 
-      name: "", 
-      game_type: "SINGLE", 
-      players_per_team: 1, 
+    setFormData({
+      name: "",
+      game_type: "SINGLE",
+      players_per_team: 1,
       is_active: true,
       tournament_id: selectedTournamentId
     });
@@ -193,7 +207,7 @@ const GamesManagement = () => {
               </SelectContent>
             </Select>
           </div>
-          
+
           <Dialog open={dialogOpen} onOpenChange={(open) => {
             setDialogOpen(open);
             if (open && !editingId) {

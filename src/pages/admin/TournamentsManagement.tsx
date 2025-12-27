@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useLoading } from "@/contexts/LoadingContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -6,6 +7,8 @@ import { Label } from "@/components/ui/label";
 import { Plus, Pencil, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import {
   addDoc,
   collection,
@@ -24,6 +27,7 @@ type TournamentRecord = {
   start_date?: string;
   end_date?: string;
   is_active: boolean;
+  status: "draft" | "active" | "completed";
 };
 
 type Tournament = TournamentRecord & {
@@ -39,13 +43,33 @@ const TournamentsManagement = () => {
     name: "",
     start_date: "",
     end_date: "",
-    is_active: true
+    is_active: true,
+    status: "draft" as "draft" | "active" | "completed"
   });
   const { toast } = useToast();
+  const { setIsLoading } = useLoading();
+
+  const formatDate = (date: any) => {
+    if (!date) return "N/A";
+    let d: Date;
+    if (typeof date === 'object' && date.toDate) {
+      d = date.toDate();
+    } else if (typeof date === 'object' && date.seconds) {
+      d = new Date(date.seconds * 1000);
+    } else {
+      d = new Date(date);
+    }
+    if (isNaN(d.getTime())) return "N/A";
+    const day = String(d.getDate()).padStart(2, '0');
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const year = d.getFullYear();
+    return `${day}/${month}/${year}`;
+  };
 
   useEffect(() => {
+    setIsLoading(true);
     fetchTournaments();
-  }, []);
+  }, [setIsLoading]);
 
   const fetchTournaments = async () => {
     try {
@@ -59,6 +83,7 @@ const TournamentsManagement = () => {
           start_date: data.start_date || "",
           end_date: data.end_date || "",
           is_active: data.is_active ?? true,
+          status: data.status || (data.is_active ? 'active' : 'draft'),
         };
       });
       setTournaments(formattedTournaments);
@@ -70,11 +95,13 @@ const TournamentsManagement = () => {
       });
     } finally {
       setLoading(false);
+      setIsLoading(false);
     }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsLoading(true);
 
     try {
       if (editingId) {
@@ -101,6 +128,8 @@ const TournamentsManagement = () => {
         description: error.message,
         variant: "destructive"
       });
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -110,7 +139,8 @@ const TournamentsManagement = () => {
       name: tournament.name,
       start_date: tournament.start_date || "",
       end_date: tournament.end_date || "",
-      is_active: tournament.is_active
+      is_active: tournament.is_active,
+      status: tournament.status || "draft"
     });
     setDialogOpen(true);
   };
@@ -118,6 +148,7 @@ const TournamentsManagement = () => {
   const handleDelete = async (id: string) => {
     if (!confirm("Are you sure you want to delete this tournament?")) return;
 
+    setIsLoading(true);
     try {
       await deleteDoc(doc(db, "tournaments", id));
       toast({ title: "Tournament deleted successfully" });
@@ -128,11 +159,13 @@ const TournamentsManagement = () => {
         description: error.message,
         variant: "destructive"
       });
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const resetForm = () => {
-    setFormData({ name: "", start_date: "", end_date: "", is_active: true });
+    setFormData({ name: "", start_date: "", end_date: "", is_active: true, status: "draft" });
     setEditingId(null);
   };
 
@@ -143,7 +176,7 @@ const TournamentsManagement = () => {
           <h1 className="text-3xl font-bold">Tournaments</h1>
           <p className="text-muted-foreground mt-2">Manage tournament configurations</p>
         </div>
-        
+
         <Dialog open={dialogOpen} onOpenChange={(open) => {
           setDialogOpen(open);
           if (!open) resetForm();
@@ -188,6 +221,34 @@ const TournamentsManagement = () => {
                   />
                 </div>
               </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="status">Status</Label>
+                  <Select
+                    value={formData.status}
+                    onValueChange={(value) => setFormData({ ...formData, status: value as any })}
+                  >
+                    <SelectTrigger id="status">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="draft">Draft</SelectItem>
+                      <SelectItem value="active">Active</SelectItem>
+                      <SelectItem value="completed">Completed</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex items-center justify-between space-y-2 pt-8">
+                  <Label htmlFor="is_active">Is Publicly Active</Label>
+                  <Switch
+                    id="is_active"
+                    checked={formData.is_active}
+                    onCheckedChange={(checked) => setFormData({ ...formData, is_active: checked })}
+                  />
+                </div>
+              </div>
+
               <Button type="submit" className="w-full">
                 {editingId ? "Update" : "Create"} Tournament
               </Button>
@@ -207,8 +268,8 @@ const TournamentsManagement = () => {
                   <div>
                     <CardTitle>{tournament.name}</CardTitle>
                     <p className="text-sm text-muted-foreground mt-1">
-                      {tournament.start_date && tournament.end_date && 
-                        `${new Date(tournament.start_date).toLocaleDateString()} - ${new Date(tournament.end_date).toLocaleDateString()}`
+                      {tournament.start_date && tournament.end_date &&
+                        `${formatDate(tournament.start_date)} - ${formatDate(tournament.end_date)}`
                       }
                     </p>
                   </div>
@@ -222,9 +283,14 @@ const TournamentsManagement = () => {
                   </div>
                 </div>
               </CardHeader>
-              <CardContent>
-                <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${tournament.is_active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
-                  {tournament.is_active ? 'Active' : 'Inactive'}
+              <CardContent className="flex gap-4">
+                <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-bold uppercase ${tournament.is_active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
+                  {tournament.is_active ? 'Public' : 'Hidden'}
+                </span>
+                <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-bold uppercase ${tournament.status === 'active' ? 'bg-blue-100 text-blue-800' :
+                    tournament.status === 'completed' ? 'bg-purple-100 text-purple-800' : 'bg-yellow-100 text-yellow-800'
+                  }`}>
+                  {tournament.status}
                 </span>
               </CardContent>
             </Card>

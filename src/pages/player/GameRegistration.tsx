@@ -23,6 +23,23 @@ const GameRegistration = () => {
     const [loading, setLoading] = useState(false);
     const [loadingGames, setLoadingGames] = useState(false);
 
+    const formatDate = (date: any) => {
+        if (!date) return "N/A";
+        let d: Date;
+        if (typeof date === 'object' && date.toDate) {
+            d = date.toDate();
+        } else if (typeof date === 'object' && date.seconds) {
+            d = new Date(date.seconds * 1000);
+        } else {
+            d = new Date(date);
+        }
+        if (isNaN(d.getTime())) return "N/A";
+        const day = String(d.getDate()).padStart(2, '0');
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const year = d.getFullYear();
+        return `${day}/${month}/${year}`;
+    };
+
     // Fetch all tournaments on component mount
     useEffect(() => {
         const loadTournaments = async () => {
@@ -220,9 +237,7 @@ const GameRegistration = () => {
                             <Calendar className="h-4 w-4 text-muted-foreground" />
                             <span className="text-muted-foreground">Start Date:</span>
                             <span className="font-medium">
-                                {selectedTournament.start_date
-                                    ? new Date(selectedTournament.start_date).toLocaleDateString()
-                                    : "TBA"}
+                                {formatDate(selectedTournament.start_date)}
                             </span>
                         </div>
                         {selectedTournament.end_date && (
@@ -230,7 +245,7 @@ const GameRegistration = () => {
                                 <Calendar className="h-4 w-4 text-muted-foreground" />
                                 <span className="text-muted-foreground">End Date:</span>
                                 <span className="font-medium">
-                                    {new Date(selectedTournament.end_date).toLocaleDateString()}
+                                    {formatDate(selectedTournament.end_date)}
                                 </span>
                             </div>
                         )}

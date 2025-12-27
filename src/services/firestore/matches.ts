@@ -18,16 +18,20 @@ const resultsCollection = collection(db, "match_results");
 export const fetchMatches = async (options: { tournamentId: string; gameId?: string }) => {
   const constraints = [
     where("tournament_id", "==", options.tournamentId),
-    orderBy("round_index", "asc"),
-    orderBy("match_order", "asc"),
   ];
   if (options.gameId) {
-    constraints.splice(1, 0, where("game_id", "==", options.gameId));
+    constraints.push(where("game_id", "==", options.gameId));
   }
 
   const matchesQuery = query(matchesCollection, ...constraints);
   const snapshot = await getDocs(matchesQuery);
-  return snapshot.docs.map((docSnap) => ({ id: docSnap.id, ...(docSnap.data() as Match) }));
+  const matches = snapshot.docs.map((docSnap) => ({ id: docSnap.id, ...(docSnap.data() as Match) }));
+
+  // Sort in memory
+  return matches.sort((a, b) => {
+    if (a.round_index !== b.round_index) return a.round_index - b.round_index;
+    return a.match_order - b.match_order;
+  });
 };
 
 export const fetchMatchesForParticipants = async (participantIds: string[]) => {
@@ -94,6 +98,7 @@ export const submitMatchResult = async (
 
   await updateMatch(matchId, {
     status: "COMPLETED",
+    winner_participant_id: result.winner_participant_id,
   });
 
   return ref.id;

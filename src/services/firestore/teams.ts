@@ -10,24 +10,38 @@ import {
   serverTimestamp,
   updateDoc,
   where,
+  QueryConstraint
 } from "firebase/firestore";
 import { db } from "@/integrations/firebase/client";
 import { Team } from "@/types/tournament";
 
 const teamsCollection = collection(db, "teams");
 
-export const fetchTeams = async (options: { tournamentId: string; gameId?: string }) => {
-  const constraints = [
-    where("tournament_id", "==", options.tournamentId),
-    orderBy("created_at", "desc"),
-  ];
+export const fetchTeams = async (options: { tournamentId?: string; gameId?: string; userId?: string }) => {
+  const constraints: QueryConstraint[] = [];
+
+  if (options.tournamentId) {
+    constraints.push(where("tournament_id", "==", options.tournamentId));
+  }
+
   if (options.gameId) {
-    constraints.splice(1, 0, where("game_id", "==", options.gameId));
+    constraints.push(where("game_id", "==", options.gameId));
+  }
+
+  if (options.userId) {
+    constraints.push(where("player_ids", "array-contains", options.userId));
   }
 
   const teamsQuery = query(teamsCollection, ...constraints);
   const snapshot = await getDocs(teamsQuery);
-  return snapshot.docs.map((docSnap) => ({ id: docSnap.id, ...(docSnap.data() as Team) }));
+  const teams = snapshot.docs.map((docSnap) => ({ id: docSnap.id, ...(docSnap.data() as Team) }));
+
+  // Sort in memory
+  return teams.sort((a, b) => {
+    const dateA = new Date(a.created_at || 0).getTime();
+    const dateB = new Date(b.created_at || 0).getTime();
+    return dateB - dateA;
+  });
 };
 
 export const createTeam = async (team: Omit<Team, "id" | "created_at" | "updated_at">) => {

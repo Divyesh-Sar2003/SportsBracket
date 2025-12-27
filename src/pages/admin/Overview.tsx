@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useLoading } from "@/contexts/LoadingContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Trophy, Users, Calendar, Gamepad2 } from "lucide-react";
 import { fetchTournaments } from "@/services/firestore/tournaments";
@@ -15,6 +16,7 @@ const Overview = () => {
     scheduledMatches: 0,
   });
   const [loading, setLoading] = useState(true);
+  const { setIsLoading } = useLoading();
 
   useEffect(() => {
     const loadDashboardData = async () => {
@@ -46,11 +48,13 @@ const Overview = () => {
         setStats(prev => ({ ...prev, activeTournamentName: "Error loading data" }));
       } finally {
         setLoading(false);
+        setIsLoading(false);
       }
     };
 
+    setIsLoading(true);
     loadDashboardData();
-  }, []);
+  }, [setIsLoading]);
 
   return (
     <div className="space-y-6">

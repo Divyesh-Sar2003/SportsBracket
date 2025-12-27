@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useLoading } from "@/contexts/LoadingContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -25,6 +26,7 @@ const Register = () => {
   const [step, setStep] = useState(location.state?.isNewUser ? 2 : 1);
   const [googleUser, setGoogleUser] = useState<User | null>(null);
   const { signUp, signInWithGoogle, signUpWithGoogle, user } = useAuth();
+  const { setIsLoading } = useLoading();
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -53,6 +55,7 @@ const Register = () => {
   const handleManualRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    setIsLoading(true);
 
     try {
       const { error } = await signUp(formData.email, formData.password, {
@@ -84,11 +87,13 @@ const Register = () => {
       });
     } finally {
       setLoading(false);
+      setIsLoading(false);
     }
   };
 
   const handleGoogleSignIn = async () => {
     setLoading(true);
+    setIsLoading(true);
     try {
       const { error, user: googleUserData, isNewUser } = await signInWithGoogle();
 
@@ -117,12 +122,14 @@ const Register = () => {
       });
     } finally {
       setLoading(false);
+      setIsLoading(false);
     }
   };
 
   const handleCompleteGoogleRegistration = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    setIsLoading(true);
 
     try {
       const { error } = await signUpWithGoogle({

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useLoading } from "@/contexts/LoadingContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
@@ -25,6 +26,7 @@ const SchedulePage = () => {
   const [matches, setMatches] = useState<Match[]>([]);
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [loading, setLoading] = useState(false);
+  const { setIsLoading } = useLoading();
 
   useEffect(() => {
     fetchTournaments().then((data) => {
@@ -53,9 +55,13 @@ const SchedulePage = () => {
       setMatches(matchesResponse);
       setParticipants(participantsResponse);
       setLoading(false);
+      setIsLoading(false);
     };
-    load();
-  }, [tournamentId, gameId]);
+    if (tournamentId) {
+      setIsLoading(true);
+      load();
+    }
+  }, [tournamentId, gameId, setIsLoading]);
 
   const participantLookup = useMemo(() => {
     return participants.reduce<Record<string, Participant>>((acc, participant) => {

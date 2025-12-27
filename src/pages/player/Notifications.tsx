@@ -92,7 +92,17 @@ const Notifications = () => {
         if (!timestamp) return "";
 
         // Handle Firestore Timestamp
-        const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+        // Handle Firestore Timestamp
+        let date: Date;
+        if (timestamp?.toDate) {
+            date = timestamp.toDate();
+        } else if (timestamp?.seconds) {
+            date = new Date(timestamp.seconds * 1000);
+        } else {
+            date = new Date(timestamp);
+        }
+
+        if (isNaN(date.getTime())) return "Invalid Date";
         const now = new Date();
         const diffMs = now.getTime() - date.getTime();
         const diffMins = Math.floor(diffMs / 60000);
@@ -104,11 +114,10 @@ const Notifications = () => {
         if (diffHours < 24) return `${diffHours} hour${diffHours !== 1 ? 's' : ''} ago`;
         if (diffDays < 7) return `${diffDays} day${diffDays !== 1 ? 's' : ''} ago`;
 
-        return date.toLocaleDateString('en-US', {
-            month: 'short',
-            day: 'numeric',
-            year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined
-        });
+        const day = String(date.getDate()).padStart(2, '0');
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const year = date.getFullYear();
+        return `${day}/${month}/${year}`;
     };
 
     const getNotificationIcon = (type?: string) => {
@@ -174,8 +183,8 @@ const Notifications = () => {
                                 <Card
                                     key={notification.id}
                                     className={`${notification.is_read
-                                            ? 'opacity-60 hover:opacity-80'
-                                            : 'border-primary/50 bg-primary/5'
+                                        ? 'opacity-60 hover:opacity-80'
+                                        : 'border-primary/50 bg-primary/5'
                                         } transition-opacity`}
                                 >
                                     <CardContent className="pt-6">

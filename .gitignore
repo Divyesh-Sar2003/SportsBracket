@@ -12,9 +12,7 @@ node_modules
 /node_modules
 .env
 .env.*.local
-dev-dist
-build
-/dist   
+ 
 
 
 # Editor directories and files

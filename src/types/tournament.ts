@@ -70,11 +70,12 @@ export interface Match extends Timestamped {
   match_order: number;
   participant_a_id?: string;
   participant_b_id?: string;
-  match_time?: string;
+  match_time?: any; // Changed from string to any to support Timestamp inputs
   venue?: string;
-  status: MatchStatus;
+  status: "SCHEDULED" | "COMPLETED" | "CANCELLED" | "scheduled" | "completed" | "cancelled"; // Support both cases
   next_match_id?: string;
   winner_slot_in_next?: "A" | "B";
+  winner_participant_id?: string;
 }
 
 export interface MatchResult extends Timestamped {
@@ -91,6 +92,7 @@ export interface MatchResult extends Timestamped {
 export interface LeaderboardEntry extends Timestamped {
   id: string;
   tournament_id: string;
+  game_id?: string;
   entity_type: "USER" | "TEAM" | "DEPARTMENT";
   entity_id: string;
   name: string;

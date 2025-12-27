@@ -28,6 +28,23 @@ const ParticipantsManagement = () => {
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
 
+  const formatDate = (date: any) => {
+    if (!date) return "N/A";
+    let d: Date;
+    if (typeof date === 'object' && date.toDate) {
+      d = date.toDate();
+    } else if (typeof date === 'object' && date.seconds) {
+      d = new Date(date.seconds * 1000);
+    } else {
+      d = new Date(date);
+    }
+    if (isNaN(d.getTime())) return "N/A";
+    const day = String(d.getDate()).padStart(2, '0');
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const year = d.getFullYear();
+    return `${day}/${month}/${year}`;
+  };
+
   useEffect(() => {
     const loadInitialData = async () => {
       const [tournamentsResponse, usersResponse] = await Promise.all([
@@ -181,9 +198,7 @@ const ParticipantsManagement = () => {
                             </Badge>
                           </td>
                           <td className="py-3 px-4 text-sm text-muted-foreground">
-                            {registration.created_at
-                              ? new Date(registration.created_at).toLocaleDateString()
-                              : "N/A"}
+                            {formatDate(registration.created_at)}
                           </td>
                         </tr>
                       );

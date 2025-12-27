@@ -8,6 +8,7 @@ import {
   Swords,
   BarChart3,
   UserCheck,
+  CalendarClock,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
@@ -30,6 +31,7 @@ const menuItems = [
   { title: "Tournaments", url: "/admin/tournaments", icon: Trophy },
   { title: "Games", url: "/admin/games", icon: Gamepad2 },
   { title: "Teams", url: "/admin/teams", icon: Swords },
+  { title: "Schedule", url: "/admin/schedule", icon: CalendarClock },
   { title: "Matches", url: "/admin/matches", icon: Calendar },
   { title: "Leaderboard", url: "/admin/leaderboard", icon: BarChart3 },
   { title: "Users", url: "/admin/users", icon: UserCheck },
