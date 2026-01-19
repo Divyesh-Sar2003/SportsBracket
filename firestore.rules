@@ -13,6 +13,54 @@ service cloud.firestore {
       allow write: if request.auth != null;
     }
 
+    // Allow public read access to games (needed for leaderboard)
+    match /games/{gameId} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+
+    // Allow public read access to matches (needed for leaderboard)
+    match /matches/{matchId} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+
+    // Allow public read access to match results (needed for leaderboard)
+    match /match_results/{resultId} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+
+    // Allow public read access to participants (needed for leaderboard)
+    match /participants/{participantId} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+
+    // Allow public read access to teams (needed for leaderboard)
+    match /teams/{teamId} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+
+    // Allow public read access to users (needed for leaderboard to show player names)
+    match /users/{userId} {
+      allow read: if true;
+      allow write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Allow public read access to profiles (the actual user data collection)
+    match /profiles/{userId} {
+      allow read: if true;
+      allow write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Allow read access to user_roles for authorized users
+    match /user_roles/{userId} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+
     // Allow authenticated users to read/write everything else
     match /{document=**} {
       allow read, write: if request.auth != null;

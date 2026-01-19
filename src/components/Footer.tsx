@@ -13,7 +13,7 @@ const Footer = () => {
             </div>
             <p className="text-sm text-muted-foreground max-w-md">
               Complete tournament management system for organizing and tracking sports events.
-              Built for Sports Week 2025.
+              Built for Sports Week 2026.
             </p>
           </div>
 
@@ -46,7 +46,7 @@ const Footer = () => {
         </div>
 
         <div className="mt-8 pt-8 border-t border-border text-center text-sm text-muted-foreground">
-          © 2025 SportsBracket. Sports Week Tournament Management System.
+          © 2026 SportsBracket. Sports Week Tournament Management System.
         </div>
       </div>
     </footer>

@@ -39,54 +39,111 @@ const LeaderboardPage = () => {
   const [activeTab, setActiveTab] = useState("standings");
 
   useEffect(() => {
-    fetchUsers().then(setUsers);
+    const loadUsers = async () => {
+      try {
+        const usersData = await fetchUsers();
+        console.log("Users loaded:", usersData.length);
+        setUsers(usersData);
+      } catch (error) {
+        console.error("Error loading users:", error);
+        setUsers([]);
+      }
+    };
+    loadUsers();
   }, []);
 
   useEffect(() => {
-    fetchTournaments().then((data) => {
-      setTournaments(data);
-      if (data.length > 0) {
-        setTournamentId(data[0].id);
+    const loadTournamentsData = async () => {
+      try {
+        const data = await fetchTournaments();
+        console.log("Tournaments loaded:", data);
+        setTournaments(data);
+        if (data.length > 0) {
+          setTournamentId(data[0].id);
+        }
+      } catch (error) {
+        console.error("Error loading tournaments:", error);
+        // Even if there's an error, we should show the page
+        setTournaments([]);
       }
-    });
+    };
+    loadTournamentsData();
+  }, []);
+
+  // Fetch all games on mount (independent of tournament selection)
+  useEffect(() => {
+    const loadAllGames = async () => {
+      try {
+        console.log("Fetching all games...");
+        const allGames = await fetchGames(); // Fetch all games without tournament filter
+        console.log("Games fetched:", allGames);
+        setGames(allGames);
+
+        // If we have games but no game is selected, set a default
+        if (allGames.length > 0 && !gameId) {
+          setGameId("ALL");
+        }
+      } catch (error) {
+        console.error("Error loading games:", error);
+        // Even if there's an error, we should show the page
+        setGames([]);
+      }
+    };
+    loadAllGames();
   }, []);
 
   useEffect(() => {
     if (!tournamentId) {
       setEntries([]);
       setMatches([]);
-      setGames([]);
       setTeams([]);
-      setGameId("");
       return;
     }
 
     const loadTournamentData = async () => {
       try {
         setIsLoading(true);
-        const [matchesData, gamesData, participantsData, teamsData] = await Promise.all([
-          fetchMatches({ tournamentId }),
-          fetchGames(tournamentId),
-          fetchParticipants({ tournamentId }),
-          fetchTeams({ tournamentId })
+        const [matchesData, participantsData, teamsData] = await Promise.all([
+          fetchMatches({ tournamentId }).catch(err => {
+            console.error("Error fetching matches:", err);
+            return [];
+          }),
+          fetchParticipants({ tournamentId }).catch(err => {
+            console.error("Error fetching participants:", err);
+            return [];
+          }),
+          fetchTeams({ tournamentId }).catch(err => {
+            console.error("Error fetching teams:", err);
+            return [];
+          })
         ]);
 
         setMatches(matchesData);
-        setGames(gamesData);
         setParticipants(participantsData);
         setTeams(teamsData);
 
         if (matchesData.length > 0) {
           const matchIds = matchesData.map(m => m.id);
-          const resultsData = await fetchMatchResultsForMatches(matchIds);
-          setResults(resultsData);
+          try {
+            const resultsData = await fetchMatchResultsForMatches(matchIds);
+            setResults(resultsData);
+          } catch (err) {
+            console.error("Error fetching match results:", err);
+            setResults([]);
+          }
         }
 
-        if (gamesData.length > 0 && !gameId) {
+        // Set default game selection if not already set
+        if (!gameId && games.length > 0) {
           setGameId("ALL");
         }
       } catch (error) {
         console.error("Error loading tournament data:", error);
+        // Set empty arrays to allow the page to render
+        setMatches([]);
+        setParticipants([]);
+        setTeams([]);
+        setResults([]);
       } finally {
         setIsLoading(false);
       }
@@ -96,7 +153,10 @@ const LeaderboardPage = () => {
   }, [tournamentId, setIsLoading]);
 
   useEffect(() => {
-    if (!tournamentId) return;
+    if (!tournamentId) {
+      setEntries([]);
+      return;
+    }
 
     const loadLeaderboardData = async () => {
       setLoading(true);
@@ -105,9 +165,12 @@ const LeaderboardPage = () => {
           tournamentId,
           activeTab === 'standings' && gameId && gameId !== 'ALL' ? gameId : undefined
         );
+        console.log("Leaderboard data loaded:", leaderboardData);
         setEntries(leaderboardData);
       } catch (error) {
         console.error("Error loading leaderboard data:", error);
+        // Set empty array to show "No data" message instead of error
+        setEntries([]);
       } finally {
         setLoading(false);
       }
@@ -189,16 +252,22 @@ const LeaderboardPage = () => {
               <p className="text-[10px] uppercase text-muted-foreground font-black tracking-widest mb-1.5 opacity-70">
                 ACTIVE TOURNAMENT
               </p>
-              <Select value={tournamentId} onValueChange={setTournamentId} >
+              <Select value={tournamentId} onValueChange={setTournamentId} disabled={tournaments.length === 0}>
                 <SelectTrigger className="bg-background border-muted-foreground/20 h-11">
-                  <SelectValue placeholder="Select tournament" />
+                  <SelectValue placeholder={tournaments.length === 0 ? "No tournaments available" : "Select tournament"} />
                 </SelectTrigger>
                 <SelectContent>
-                  {tournaments.map((tournament) => (
-                    <SelectItem value={tournament.id} key={tournament.id}>
-                      {tournament.name}
-                    </SelectItem>
-                  ))}
+                  {tournaments.length === 0 ? (
+                    <div className="px-2 py-6 text-center text-sm text-muted-foreground">
+                      No tournaments found
+                    </div>
+                  ) : (
+                    tournaments.map((tournament) => (
+                      <SelectItem value={tournament.id} key={tournament.id}>
+                        {tournament.name}
+                      </SelectItem>
+                    ))
+                  )}
                 </SelectContent>
               </Select>
             </div>
@@ -207,17 +276,33 @@ const LeaderboardPage = () => {
               <p className="text-[10px] uppercase text-muted-foreground font-black tracking-widest mb-1.5 opacity-70">
                 {activeTab === 'standings' ? 'FILTER STANDINGS' : 'SELECT GAME'}
               </p>
-              <Select value={gameId} onValueChange={setGameId} disabled={!tournamentId}>
+              <Select value={gameId} onValueChange={setGameId} disabled={!tournamentId || games.length === 0}>
                 <SelectTrigger className="bg-background border-muted-foreground/20 h-11">
-                  <SelectValue placeholder="Select choice" />
+                  <SelectValue placeholder={
+                    !tournamentId
+                      ? "Select tournament first"
+                      : games.length === 0
+                        ? "No games available"
+                        : "Select choice"
+                  } />
                 </SelectTrigger>
                 <SelectContent>
+                  {(() => {
+                    console.log("Rendering games dropdown, games array:", games, "length:", games.length);
+                    return null;
+                  })()}
                   {activeTab === 'standings' && <SelectItem value="ALL">Total Standings</SelectItem>}
-                  {games.map((g) => (
-                    <SelectItem value={g.id} key={g.id}>
-                      {g.name}
-                    </SelectItem>
-                  ))}
+                  {games.length === 0 ? (
+                    <div className="px-2 py-6 text-center text-sm text-muted-foreground">
+                      No games found for this tournament
+                    </div>
+                  ) : (
+                    games.map((g) => (
+                      <SelectItem value={g.id} key={g.id}>
+                        {g.name}
+                      </SelectItem>
+                    ))
+                  )}
                 </SelectContent>
               </Select>
             </div>
@@ -251,7 +336,11 @@ const LeaderboardPage = () => {
                 <CardContent className="p-8">
                   {podium.length === 0 ? (
                     <div className="py-20 text-center">
-                      <p className="text-muted-foreground font-medium">No standings data available for this tournament yet.</p>
+                      <p className="text-muted-foreground font-medium">
+                        {!tournamentId
+                          ? "Please select a tournament to view standings."
+                          : "No standings data available yet. Check back after matches have been completed."}
+                      </p>
                     </div>
                   ) : (
                     <div className="grid gap-6 md:grid-cols-3">

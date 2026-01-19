@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { isBefore } from "date-fns";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -370,11 +371,20 @@ const MatchesManagement = () => {
                                 // Format for datetime-local: YYYY-MM-DDThh:mm
                                 return new Date(date.getTime() - (date.getTimezoneOffset() * 60000)).toISOString().slice(0, 16);
                               })()}
-                              onChange={(event) =>
+                              onChange={(event) => {
+                                const newDate = new Date(event.target.value);
+                                if (isBefore(newDate, new Date())) {
+                                  toast({
+                                    title: "Invalid date",
+                                    description: "Cannot set match time in the past.",
+                                    variant: "destructive",
+                                  });
+                                  return;
+                                }
                                 updateMatch(match.id, {
-                                  match_time: new Date(event.target.value).toISOString(),
-                                })
-                              }
+                                  match_time: newDate.toISOString(),
+                                });
+                              }}
                             />
                             <Input
                               placeholder="Venue"
