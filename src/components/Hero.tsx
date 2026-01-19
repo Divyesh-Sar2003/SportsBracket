@@ -11,7 +11,7 @@ const Hero = () => {
         <div className="mx-auto max-w-5xl text-center">
           <div className="mb-6 md:mb-8 inline-flex items-center rounded-full bg-white/10 px-4 md:px-6 py-2 md:py-2.5 backdrop-blur-sm border border-white/20 animate-slide-down hover:scale-105 transition-transform">
             <Trophy className="mr-2 h-4 w-4 md:h-5 md:w-5 text-accent animate-pulse" />
-            <span className="text-xs md:text-sm font-semibold text-white">Sports Week 2025</span>
+            <span className="text-xs md:text-sm font-semibold text-white">Sports Week 2026</span>
             <Zap className="ml-2 h-4 w-4 md:h-5 md:w-5 text-warning" />
           </div>
 

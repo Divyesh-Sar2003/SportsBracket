@@ -18,6 +18,7 @@ import {
   Bell,
   Gamepad2,
   ListChecks,
+  BarChart3,
 } from "lucide-react";
 
 const menuItems = [
@@ -57,10 +58,16 @@ const menuItems = [
     icon: Calendar,
   },
   {
+    title: "Leaderboard",
+    url: "/leaderboard",
+    icon: BarChart3,
+  },
+  {
     title: "Profile",
     url: "/dashboard/profile",
     icon: User,
   },
+
 ];
 
 export function PlayerSidebar() {

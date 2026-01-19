@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, isToday, startOfWeek, endOfWeek, isValid } from "date-fns";
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, isToday, startOfWeek, endOfWeek, isValid, isBefore, startOfToday } from "date-fns";
 import { ChevronLeft, ChevronRight, Plus, Clock, MapPin, Users, Trophy, Calendar as CalendarIcon, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -134,13 +134,18 @@ const MatchesSchedule = () => {
             return;
         }
 
+        // Combine date and time
+        const [hours, minutes] = matchTime.split(':').map(Number);
+        const startDateTime = new Date(selectedDate);
+        startDateTime.setHours(hours, minutes);
+
+        if (isBefore(startDateTime, new Date())) {
+            toast({ title: "Cannot schedule match in the past", variant: "destructive" });
+            return;
+        }
+
         setSubmitting(true);
         try {
-            // Combine date and time
-            const [hours, minutes] = matchTime.split(':').map(Number);
-            const startDateTime = new Date(selectedDate);
-            startDateTime.setHours(hours, minutes);
-
             const matchData = {
                 tournament_id: selectedTournamentId,
                 game_id: selectedGameId,
@@ -463,115 +468,119 @@ const MatchesSchedule = () => {
                         )}
 
                         <div className="space-y-4 border-t pt-4">
-                            <h3 className="font-semibold text-lg flex items-center gap-2">
-                                <Plus className="h-4 w-4" /> Schedule New Match
-                            </h3>
+                            {selectedDate && isBefore(selectedDate, startOfToday()) ? (
+                                <div className="p-4 bg-muted/50 rounded-lg text-center text-muted-foreground">
+                                    Cannot schedule new matches for past dates.
+                                </div>
+                            ) : (
+                                <>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="space-y-2">
+                                            <Label>Tournament</Label>
+                                            <Select value={selectedTournamentId} onValueChange={setSelectedTournamentId}>
+                                                <SelectTrigger>
+                                                    <SelectValue placeholder="Select tournament" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    {tournaments.map(t => (
+                                                        <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label>Game</Label>
+                                            <Select value={selectedGameId} onValueChange={setSelectedGameId} disabled={!selectedTournamentId}>
+                                                <SelectTrigger>
+                                                    <SelectValue placeholder="Select game" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    {games.map(g => (
+                                                        <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+                                    </div>
 
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="space-y-2">
-                                    <Label>Tournament</Label>
-                                    <Select value={selectedTournamentId} onValueChange={setSelectedTournamentId}>
-                                        <SelectTrigger>
-                                            <SelectValue placeholder="Select tournament" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {tournaments.map(t => (
-                                                <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-                                <div className="space-y-2">
-                                    <Label>Game</Label>
-                                    <Select value={selectedGameId} onValueChange={setSelectedGameId} disabled={!selectedTournamentId}>
-                                        <SelectTrigger>
-                                            <SelectValue placeholder="Select game" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {games.map(g => (
-                                                <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-                            </div>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="space-y-2">
+                                            <Label>{formLabel} A</Label>
+                                            <Select value={participantAId} onValueChange={setParticipantAId} disabled={!selectedGameId}>
+                                                <SelectTrigger>
+                                                    <SelectValue placeholder={`Select ${formLabel.toLowerCase()}`} />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    {availableParticipants.map(p => {
+                                                        const isScheduled = scheduledParticipantIds.has(p.id);
+                                                        const isEliminated = eliminatedParticipantIds.has(p.id);
+                                                        return (
+                                                            <SelectItem
+                                                                key={p.id}
+                                                                value={p.id}
+                                                                disabled={isScheduled || isEliminated}
+                                                            >
+                                                                {getResolvedParticipantNameFromObject(p)}
+                                                                {isScheduled && " (Already Scheduled)"}
+                                                                {isEliminated && " (Eliminated)"}
+                                                            </SelectItem>
+                                                        );
+                                                    })}
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label>{formLabel} B</Label>
+                                            <Select value={participantBId} onValueChange={setParticipantBId} disabled={!selectedGameId}>
+                                                <SelectTrigger>
+                                                    <SelectValue placeholder={`Select ${formLabel.toLowerCase()}`} />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    {availableParticipants.filter(p => p.id !== participantAId).map(p => {
+                                                        const isScheduled = scheduledParticipantIds.has(p.id);
+                                                        const isEliminated = eliminatedParticipantIds.has(p.id);
+                                                        return (
+                                                            <SelectItem
+                                                                key={p.id}
+                                                                value={p.id}
+                                                                disabled={isScheduled || isEliminated}
+                                                            >
+                                                                {getResolvedParticipantNameFromObject(p)}
+                                                                {isScheduled && " (Already Scheduled)"}
+                                                                {isEliminated && " (Eliminated)"}
+                                                            </SelectItem>
+                                                        );
+                                                    })}
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+                                    </div>
 
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="space-y-2">
-                                    <Label>{formLabel} A</Label>
-                                    <Select value={participantAId} onValueChange={setParticipantAId} disabled={!selectedGameId}>
-                                        <SelectTrigger>
-                                            <SelectValue placeholder={`Select ${formLabel.toLowerCase()}`} />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {availableParticipants.map(p => {
-                                                const isScheduled = scheduledParticipantIds.has(p.id);
-                                                const isEliminated = eliminatedParticipantIds.has(p.id);
-                                                return (
-                                                    <SelectItem
-                                                        key={p.id}
-                                                        value={p.id}
-                                                        disabled={isScheduled || isEliminated}
-                                                    >
-                                                        {getResolvedParticipantNameFromObject(p)}
-                                                        {isScheduled && " (Already Scheduled)"}
-                                                        {isEliminated && " (Eliminated)"}
-                                                    </SelectItem>
-                                                );
-                                            })}
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-                                <div className="space-y-2">
-                                    <Label>{formLabel} B</Label>
-                                    <Select value={participantBId} onValueChange={setParticipantBId} disabled={!selectedGameId}>
-                                        <SelectTrigger>
-                                            <SelectValue placeholder={`Select ${formLabel.toLowerCase()}`} />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {availableParticipants.filter(p => p.id !== participantAId).map(p => {
-                                                const isScheduled = scheduledParticipantIds.has(p.id);
-                                                const isEliminated = eliminatedParticipantIds.has(p.id);
-                                                return (
-                                                    <SelectItem
-                                                        key={p.id}
-                                                        value={p.id}
-                                                        disabled={isScheduled || isEliminated}
-                                                    >
-                                                        {getResolvedParticipantNameFromObject(p)}
-                                                        {isScheduled && " (Already Scheduled)"}
-                                                        {isEliminated && " (Eliminated)"}
-                                                    </SelectItem>
-                                                );
-                                            })}
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-                            </div>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="space-y-2">
+                                            <Label>Time</Label>
+                                            <Input
+                                                type="time"
+                                                value={matchTime}
+                                                onChange={(e) => setMatchTime(e.target.value)}
+                                            />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label>Location</Label>
+                                            <Input
+                                                placeholder="Court 1, Field A, etc."
+                                                value={location}
+                                                onChange={(e) => setLocation(e.target.value)}
+                                            />
+                                        </div>
+                                    </div>
 
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="space-y-2">
-                                    <Label>Time</Label>
-                                    <Input
-                                        type="time"
-                                        value={matchTime}
-                                        onChange={(e) => setMatchTime(e.target.value)}
-                                    />
-                                </div>
-                                <div className="space-y-2">
-                                    <Label>Location</Label>
-                                    <Input
-                                        placeholder="Court 1, Field A, etc."
-                                        value={location}
-                                        onChange={(e) => setLocation(e.target.value)}
-                                    />
-                                </div>
-                            </div>
-
-                            <Button onClick={handleCreateMatch} disabled={submitting || !matchTime || !participantAId || !participantBId} className="w-full">
-                                {submitting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-                                Schedule Match
-                            </Button>
+                                    <Button onClick={handleCreateMatch} disabled={submitting || !matchTime || !participantAId || !participantBId} className="w-full">
+                                        {submitting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                                        Schedule Match
+                                    </Button>
+                                </>
+                            )}
                         </div>
                     </div>
                 </DialogContent>
