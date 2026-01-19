@@ -7,20 +7,38 @@
 [![Firebase](https://img.shields.io/badge/Firebase-11.10.0-orange)](https://firebase.google.com/)
 [![Vite](https://img.shields.io/badge/Vite-5.4.19-purple)](https://vitejs.dev/)
 
+## ⚡ TL;DR
+- **The Pitch**: A premium tournament management system for campus sports, featuring real-time brackets, automated leaderboards, and role-based dashboards.
+- **The Tech**: React 18, TypeScript, Firebase (Firestore, Auth, Storage), TanStack Query for caching.
+- **The Impact**: Streamlines registration, scheduling, and result tracking for large-scale sports events.
+- **Live Demo**: [sportsbracket.example.com](https://github.com/Divyesh-Sar2003/SportsBracket) *(Replace with your URL)*
+
+## 🚀 Quick Start
+```bash
+git clone https://github.com/Divyesh-Sar2003/SportsBracket.git
+cd SportsBracket
+npm install
+npm run dev
+```
+*(Requires Firebase credentials in `.env` — See [Configuration](#environment-variables))*
+
 ## 📋 Table of Contents
 
 - [Overview](#overview)
-- [Features](#features)
-- [Tech Stack](#tech-stack)
-- [Project Structure](#project-structure)
-- [Prerequisites](#prerequisites)
-- [Installation](#installation)
-- [Environment Variables](#environment-variables)
-- [Development](#development)
-- [Firebase Data Model](#firebase-data-model)
-- [User Roles](#user-roles)
-- [Available Scripts](#available-scripts)
-- [Firestore Indexes](#firestore-indexes)
+- [📸 Screenshots](#-screenshots)
+- [🧠 System Architecture](#-system-architecture)
+- [🔐 Security Considerations](#-security-considerations)
+- [⚖️ Design Trade-offs & Limitations](#-design-trade-offs--limitations)
+- [✨ Features](#-features)
+- [🛠 Tech Stack](#-tech-stack)
+- [📁 Project Structure](#-project-structure)
+- [🚀 Installation](#-installation)
+- [🔐 Environment Variables](#-environment-variables)
+- [💻 Development](#-development)
+- [🗄 Firebase Data Model](#-firebase-data-model)
+- [👥 User Roles](#-user-roles)
+- [📜 Available Scripts](#-available-scripts)
+- [🗃 Firestore Indexes](#-firestore-indexes)
 - [Deployment](#deployment)
 - [Contributing](#contributing)
 
@@ -36,6 +54,34 @@
 - **Mobile Responsive**: Fully optimized for all device sizes
 - **Authentication**: Google OAuth and Email/Password support
 - **Cloud-Based**: Firebase backend for real-time data synchronization
+
+## 📸 Screenshots
+*(Coming Soon)*
+| Admin Dashboard | Player Bracket | Public Leaderboard |
+| :---: | :---: | :---: |
+| ![Admin Dashboard](https://via.placeholder.com/400x250?text=Admin+Dashboard) | ![Player Bracket](https://via.placeholder.com/400x250?text=Player+Bracket) | ![Public Leaderboard](https://via.placeholder.com/400x250?text=Public+Leaderboard) |
+
+## 🧠 System Architecture
+
+- **Auth-Driven Access**: Client-side role-based access control using Firebase Auth + Firestore roles (`user_roles` collection).
+- **Single Source of Truth**: Firestore serves as the central repository for schedules, results, and participants.
+- **Smart Caching**: TanStack Query (React Query) handles data caching, background synchronization, and optimistic UI updates for a snappy feel.
+- **Reactive UX**: Real-time Firestore listeners ensure that match updates, leaderboard shifts, and notifications reflect instantly across all connected clients.
+- **Business Logic Layer**: Business rules are primarily implemented in client-side services (`src/services/firestore`), complemented by Firestore security rules for enforcement.
+
+## 🔐 Security Considerations
+
+- **Role-Based Access Enforcement**: Security is not just client-side; Firestore security rules validate every request based on the user's role.
+- **Admin-Only Authority**: Write access for high-stakes collections like `tournaments`, `matches`, and `leaderboards` is restricted to users with the `admin` role.
+- **Data Protection**: Players are restricted to read-only access for sensitive shared data, while having user-specific write access to their own `profiles` and `notifications`.
+- **Integrity**: Rules are designed to prevent malicious players from modifying match results or registrations they don't own.
+
+## ⚖️ Design Trade-offs & Limitations
+
+- **Client-Heavy Logic**: To maximize development speed and leverage Firebase's real-time capabilities, most business logic resides in the frontend. While efficient for this scale, it requires robust security rules to prevent bypass.
+- **Firebase/NoSQL Scalability**: Optimized for campus-level sports weeks. Extreme scale might require migrating complex aggregation logic (like leaderboard calculations) to Cloud Functions.
+- **No Transactional Guarantees**: While Firestore supports transactions, simple match updates rely on atomic writes. Complex multi-document updates could benefit from a dedicated backend validation layer in a production-at-scale scenario.
+- **Authentication**: Relying on Firebase Auth simplifies the stack but ties the implementation to Google's ecosystem.
 
 ## ✨ Features
 
