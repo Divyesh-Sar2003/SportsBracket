@@ -26,12 +26,12 @@ orderBy("created_at", "desc")
 ## 2. matches Collection
 
 ### Index 1: With gameId filter
-**Index Name:** `matches-tournament_id-game_id-round_index-match_order`
+**Index Name:** `matches-game_id-tournament_id-round_index-match_order`
 
 - **Collection ID:** `matches`
 - **Fields:**
-  1. `tournament_id` - Ascending
-  2. `game_id` - Ascending
+  1. `game_id` - Ascending
+  2. `tournament_id` - Ascending
   3. `round_index` - Ascending
   4. `match_order` - Ascending
 
@@ -64,12 +64,12 @@ orderBy("match_order", "asc")
 ## 3. participants Collection
 
 ### Index 1: With gameId filter
-**Index Name:** `participants-tournament_id-game_id-seed-created_at`
+**Index Name:** `participants-game_id-tournament_id-seed-created_at`
 
 - **Collection ID:** `participants`
 - **Fields:**
-  1. `tournament_id` - Ascending
-  2. `game_id` - Ascending
+  1. `game_id` - Ascending
+  2. `tournament_id` - Ascending
   3. `seed` - Ascending
   4. `created_at` - Ascending
 
@@ -116,6 +116,49 @@ orderBy("points", "desc")
 
 ---
 
+## 5. registrations Collection
+
+### Index 1: General filter
+**Index Name:** `registrations-tournament_id-created_at`
+
+- **Collection ID:** `registrations`
+- **Fields:**
+  1. `tournament_id` - Ascending
+  2. `created_at` - Descending
+
+### Index 2: With gameId filter
+**Index Name:** `registrations-game_id-tournament_id-created_at`
+
+- **Collection ID:** `registrations`
+- **Fields:**
+  1. `game_id` - Ascending
+  2. `tournament_id` - Ascending
+  3. `created_at` - Descending
+
+### Index 3: Advanced filtering (Tourney + Game + Status)
+**Index Name:** `registrations-tournament_id-game_id-status-created_at`
+
+- **Collection ID:** `registrations`
+- **Fields:**
+  1. `tournament_id` - Ascending
+  2. `game_id` - Ascending
+  3. `status` - Ascending
+  4. `created_at` - Descending
+
+---
+
+## 6. teams Collection
+
+**Index Name:** `teams-game_id-tournament_id-created_at`
+
+- **Collection ID:** `teams`
+- **Fields:**
+  1. `game_id` - Ascending
+  2. `tournament_id` - Ascending
+  3. `created_at` - Descending
+
+---
+
 ## Quick Setup Instructions
 
 1. Go to [Firebase Console](https://console.firebase.google.com)
@@ -141,4 +184,3 @@ The query requires an index. You can create it here: https://console.firebase.go
 ```
 
 Just click that URL and Firebase will auto-populate the index configuration for you. Then click **Create**.
-

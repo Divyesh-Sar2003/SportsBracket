@@ -20,6 +20,7 @@
 - [Firebase Data Model](#firebase-data-model)
 - [User Roles](#user-roles)
 - [Available Scripts](#available-scripts)
+- [Firestore Indexes](#firestore-indexes)
 - [Deployment](#deployment)
 - [Contributing](#contributing)
 
@@ -139,8 +140,8 @@
 #### Schedule View
 - Interactive calendar displaying all matches
 - Filter by tournament or game
-- Click matches for detailed information
-- Automatic timezone handling
+- Click matches for detailed information (Game name, team/player names, time, results)
+- Automatic timezone handling and dynamic status coloring
 
 #### Leaderboard
 - Real-time tournament standings
@@ -464,15 +465,19 @@ Player registration requests.
 ```
 
 #### `participants/{participantId}`
-Approved participants.
+Approved participants for a specific game/tournament.
 
 ```typescript
 {
-  user_id: string
-  game_id: string
   tournament_id: string
-  team_id?: string
+  game_id: string
+  type: "USER" | "TEAM"         // "USER" for SINGLE/PAIR, "TEAM" for team games
+  user_id?: string              // User ID if type is USER
+  team_id?: string              // Team ID if type is TEAM
+  seed?: number                 // Starting rank/position
+  approved_by?: string          // Admin user ID who approved
   createdAt: Timestamp
+  updatedAt: Timestamp
 }
 ```
 
@@ -494,17 +499,18 @@ Tournament standings.
 ```
 
 #### `notifications/{notificationId}`
-User notifications.
+User notifications for system events.
 
 ```typescript
 {
   user_id: string
   title: string
   message: string
-  type: "match" | "registration" | "tournament" | "general"
+  type: "registration" | "match" | "tournament" | "general"
   is_read: boolean
-  related_id?: string          // ID of related entity
+  payload?: object              // Additional contextual data
   createdAt: Timestamp
+  updatedAt: Timestamp
 }
 ```
 
@@ -560,9 +566,23 @@ npm run build:dev
 # Preview production build locally
 npm run preview
 
+```bash
 # Run ESLint
 npm run lint
 ```
+
+## 🗃 Firestore Indexes
+
+The application requires several composite indexes for efficient querying of matches, registrations, and leaderboards.
+
+Detailed configuration instructions can be found in:
+👉 **[FIREBASE_INDEXES.md](./FIREBASE_INDEXES.md)**
+
+### How to apply indexes:
+1. Open the [Firebase Console](https://console.firebase.google.com)
+2. Go to **Firestore Database** -> **Indexes**
+3. Create indexes as specified in the [configuration file](./FIREBASE_INDEXES.md)
+4. Or simply click the auto-generated links in your browser console when you encounter a "query requires an index" error during development.
 
 ## 🚀 Deployment
 
