@@ -380,37 +380,32 @@
 /* Responsive Column Widths */
 .users-table th:nth-child(1),
 .users-table td:nth-child(1) {
-  width: 180px;
+  width: 140px;
 }
 
 .users-table th:nth-child(2),
 .users-table td:nth-child(2) {
-  width: 250px;
+  width: 180px;
 }
 
 .users-table th:nth-child(3),
 .users-table td:nth-child(3) {
-  width: 140px;
+  width: 100px;
 }
 
 .users-table th:nth-child(4),
 .users-table td:nth-child(4) {
-  width: 150px;
+  width: 130px;
 }
 
 .users-table th:nth-child(5),
 .users-table td:nth-child(5) {
-  width: 100px;
+  width: 150px;
 }
 
 .users-table th:nth-child(6),
 .users-table td:nth-child(6) {
-  width: 140px;
-}
-
-.users-table th:nth-child(7),
-.users-table td:nth-child(7) {
-  width: 160px;
+  width: 150px;
 }
 
 .users-table tbody {
@@ -545,6 +540,13 @@
   background: var(--gradient-accent);
   color: white;
   box-shadow: 0 4px 12px hsl(27 96% 61% / 0.3);
+}
+
+.role-badge.super-admin {
+  background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+  color: #fbbf24;
+  border: 1px solid #fbbf24;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 
 .role-badge.admin:hover {

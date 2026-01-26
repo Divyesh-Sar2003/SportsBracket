@@ -12,12 +12,14 @@ import { fetchTournaments } from "@/services/firestore/tournaments";
 import { fetchGames } from "@/services/firestore/games";
 import { fetchTeams } from "@/services/firestore/teams";
 import { createMatch, fetchMatches, updateMatch } from "@/services/firestore/matches";
+import { useAuth } from "@/contexts/AuthContext";
 import { createNotification } from "@/services/firestore/notifications";
 import { Tournament, Game, Team, Match, Participant } from "@/types/tournament";
 import { fetchParticipants } from "@/services/firestore/participants";
 import { fetchUsers, User } from "@/services/firestore/users";
 
 const MatchesSchedule = () => {
+    const { user: currentUser } = useAuth();
     const [currentMonth, setCurrentMonth] = useState(new Date());
     const [selectedDate, setSelectedDate] = useState<Date | null>(null);
     const [matches, setMatches] = useState<Match[]>([]);
@@ -159,7 +161,10 @@ const MatchesSchedule = () => {
                 match_order: 0,
             };
 
-            await createMatch(matchData);
+            await createMatch(matchData, {
+                id: currentUser?.uid || "unknown",
+                name: currentUser?.displayName || currentUser?.email || "Admin"
+            });
 
             toast({ title: "Match scheduled successfully" });
             setDialogOpen(false);

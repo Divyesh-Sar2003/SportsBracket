@@ -7,19 +7,38 @@
 [![Firebase](https://img.shields.io/badge/Firebase-11.10.0-orange)](https://firebase.google.com/)
 [![Vite](https://img.shields.io/badge/Vite-5.4.19-purple)](https://vitejs.dev/)
 
+## ⚡ TL;DR
+- **The Pitch**: A premium tournament management system for campus sports, featuring real-time brackets, automated leaderboards, and role-based dashboards.
+- **The Tech**: React 18, TypeScript, Firebase (Firestore, Auth, Storage), TanStack Query for caching.
+- **The Impact**: Streamlines registration, scheduling, and result tracking for large-scale sports events.
+- **Live Demo**: [sportsbracket.example.com](https://github.com/Divyesh-Sar2003/SportsBracket) *(Replace with your URL)*
+
+## 🚀 Quick Start
+```bash
+git clone https://github.com/Divyesh-Sar2003/SportsBracket.git
+cd SportsBracket
+npm install
+npm run dev
+```
+*(Requires Firebase credentials in `.env` — See [Configuration](#environment-variables))*
+
 ## 📋 Table of Contents
 
 - [Overview](#overview)
-- [Features](#features)
-- [Tech Stack](#tech-stack)
-- [Project Structure](#project-structure)
-- [Prerequisites](#prerequisites)
-- [Installation](#installation)
-- [Environment Variables](#environment-variables)
-- [Development](#development)
-- [Firebase Data Model](#firebase-data-model)
-- [User Roles](#user-roles)
-- [Available Scripts](#available-scripts)
+- [📸 Screenshots](#-screenshots)
+- [🧠 System Architecture](#-system-architecture)
+- [🔐 Security Considerations](#-security-considerations)
+- [⚖️ Design Trade-offs & Limitations](#-design-trade-offs--limitations)
+- [✨ Features](#-features)
+- [🛠 Tech Stack](#-tech-stack)
+- [📁 Project Structure](#-project-structure)
+- [🚀 Installation](#-installation)
+- [🔐 Environment Variables](#-environment-variables)
+- [💻 Development](#-development)
+- [🗄 Firebase Data Model](#-firebase-data-model)
+- [👥 User Roles](#-user-roles)
+- [📜 Available Scripts](#-available-scripts)
+- [🗃 Firestore Indexes](#-firestore-indexes)
 - [Deployment](#deployment)
 - [Contributing](#contributing)
 
@@ -35,6 +54,34 @@
 - **Mobile Responsive**: Fully optimized for all device sizes
 - **Authentication**: Google OAuth and Email/Password support
 - **Cloud-Based**: Firebase backend for real-time data synchronization
+
+## 📸 Screenshots
+*(Coming Soon)*
+| Admin Dashboard | Player Bracket | Public Leaderboard |
+| :---: | :---: | :---: |
+| ![Admin Dashboard](https://via.placeholder.com/400x250?text=Admin+Dashboard) | ![Player Bracket](https://via.placeholder.com/400x250?text=Player+Bracket) | ![Public Leaderboard](https://via.placeholder.com/400x250?text=Public+Leaderboard) |
+
+## 🧠 System Architecture
+
+- **Auth-Driven Access**: Client-side role-based access control using Firebase Auth + Firestore roles (`user_roles` collection).
+- **Single Source of Truth**: Firestore serves as the central repository for schedules, results, and participants.
+- **Smart Caching**: TanStack Query (React Query) handles data caching, background synchronization, and optimistic UI updates for a snappy feel.
+- **Reactive UX**: Real-time Firestore listeners ensure that match updates, leaderboard shifts, and notifications reflect instantly across all connected clients.
+- **Business Logic Layer**: Business rules are primarily implemented in client-side services (`src/services/firestore`), complemented by Firestore security rules for enforcement.
+
+## 🔐 Security Considerations
+
+- **Role-Based Access Enforcement**: Security is not just client-side; Firestore security rules validate every request based on the user's role.
+- **Admin-Only Authority**: Write access for high-stakes collections like `tournaments`, `matches`, and `leaderboards` is restricted to users with the `admin` role.
+- **Data Protection**: Players are restricted to read-only access for sensitive shared data, while having user-specific write access to their own `profiles` and `notifications`.
+- **Integrity**: Rules are designed to prevent malicious players from modifying match results or registrations they don't own.
+
+## ⚖️ Design Trade-offs & Limitations
+
+- **Client-Heavy Logic**: To maximize development speed and leverage Firebase's real-time capabilities, most business logic resides in the frontend. While efficient for this scale, it requires robust security rules to prevent bypass.
+- **Firebase/NoSQL Scalability**: Optimized for campus-level sports weeks. Extreme scale might require migrating complex aggregation logic (like leaderboard calculations) to Cloud Functions.
+- **No Transactional Guarantees**: While Firestore supports transactions, simple match updates rely on atomic writes. Complex multi-document updates could benefit from a dedicated backend validation layer in a production-at-scale scenario.
+- **Authentication**: Relying on Firebase Auth simplifies the stack but ties the implementation to Google's ecosystem.
 
 ## ✨ Features
 
@@ -139,8 +186,8 @@
 #### Schedule View
 - Interactive calendar displaying all matches
 - Filter by tournament or game
-- Click matches for detailed information
-- Automatic timezone handling
+- Click matches for detailed information (Game name, team/player names, time, results)
+- Automatic timezone handling and dynamic status coloring
 
 #### Leaderboard
 - Real-time tournament standings
@@ -464,15 +511,19 @@ Player registration requests.
 ```
 
 #### `participants/{participantId}`
-Approved participants.
+Approved participants for a specific game/tournament.
 
 ```typescript
 {
-  user_id: string
-  game_id: string
   tournament_id: string
-  team_id?: string
+  game_id: string
+  type: "USER" | "TEAM"         // "USER" for SINGLE/PAIR, "TEAM" for team games
+  user_id?: string              // User ID if type is USER
+  team_id?: string              // Team ID if type is TEAM
+  seed?: number                 // Starting rank/position
+  approved_by?: string          // Admin user ID who approved
   createdAt: Timestamp
+  updatedAt: Timestamp
 }
 ```
 
@@ -494,17 +545,18 @@ Tournament standings.
 ```
 
 #### `notifications/{notificationId}`
-User notifications.
+User notifications for system events.
 
 ```typescript
 {
   user_id: string
   title: string
   message: string
-  type: "match" | "registration" | "tournament" | "general"
+  type: "registration" | "match" | "tournament" | "general"
   is_read: boolean
-  related_id?: string          // ID of related entity
+  payload?: object              // Additional contextual data
   createdAt: Timestamp
+  updatedAt: Timestamp
 }
 ```
 
@@ -560,9 +612,23 @@ npm run build:dev
 # Preview production build locally
 npm run preview
 
+```bash
 # Run ESLint
 npm run lint
 ```
+
+## 🗃 Firestore Indexes
+
+The application requires several composite indexes for efficient querying of matches, registrations, and leaderboards.
+
+Detailed configuration instructions can be found in:
+👉 **[FIREBASE_INDEXES.md](./FIREBASE_INDEXES.md)**
+
+### How to apply indexes:
+1. Open the [Firebase Console](https://console.firebase.google.com)
+2. Go to **Firestore Database** -> **Indexes**
+3. Create indexes as specified in the [configuration file](./FIREBASE_INDEXES.md)
+4. Or simply click the auto-generated links in your browser console when you encounter a "query requires an index" error during development.
 
 ## 🚀 Deployment
 

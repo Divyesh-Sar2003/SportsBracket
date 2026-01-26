@@ -12,8 +12,17 @@ import {
 } from "firebase/firestore";
 import { db } from "@/integrations/firebase/client";
 import { Participant } from "@/types/tournament";
+import { getDoc } from "firebase/firestore";
 
 const participantsCollection = collection(db, "participants");
+
+export const fetchParticipantById = async (id: string) => {
+  const docSnap = await getDoc(doc(db, "participants", id));
+  if (docSnap.exists()) {
+    return { id: docSnap.id, ...(docSnap.data() as Participant) };
+  }
+  return null;
+};
 
 export const fetchParticipants = async (options: {
   tournamentId?: string;

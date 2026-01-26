@@ -193,7 +193,11 @@ const ParticipantsManagement = () => {
                             {getGameName(registration.game_id)}
                           </td>
                           <td className="py-3 px-4">
-                            <Badge variant={statusVariant[registration.status]}>
+                            <Badge
+                              variant={statusVariant[registration.status]}
+                              title={registration.processed_by_name ? `Processed by: ${registration.processed_by_name}` : "Pending review"}
+                              className="cursor-help"
+                            >
                               {registration.status}
                             </Badge>
                           </td>

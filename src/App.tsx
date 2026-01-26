@@ -11,10 +11,11 @@ import LeaderboardPage from "./pages/Leaderboard";
 import SchedulePage from "./pages/Schedule";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import PlayerDashboard from "./pages/PlayerDashboard";
-// import * as AdminDashboard from "./pages/admin/AdminDashboard";
 import NotFound from "./pages/NotFound";
 
 import { LoadingProvider } from "./contexts/LoadingContext";
+import PWAInstallPrompt from "./components/PWAInstallPrompt";
+import { NotificationProvider } from "./contexts/NotificationContext";
 
 const queryClient = new QueryClient();
 
@@ -23,23 +24,24 @@ const App = () => (
     <TooltipProvider>
       <Toaster />
       <Sonner />
+      <PWAInstallPrompt />
       <BrowserRouter basename={import.meta.env.BASE_URL} future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
         <LoadingProvider>
           <AuthProvider>
-            <Routes>
-              <Route path="/" element={<Index />} />
-              <Route path="/leaderboard" element={<LeaderboardPage />} />
-              <Route path="/schedule" element={<SchedulePage />} />
-              <Route path="/login" element={<Login />} />
-              <Route path="/register" element={<Register />} />
-              <Route path="/dashboard/*" element={<PlayerDashboard />} />
-              {/* <Route path="/admin/*" element={<AdminDashboard.Overview />} /> */}
-              <Route path="/admin/*" element={<AdminDashboard />} />
+            <NotificationProvider>
+              <Routes>
+                <Route path="/" element={<Index />} />
+                <Route path="/leaderboard" element={<LeaderboardPage />} />
+                <Route path="/schedule" element={<SchedulePage />} />
+                <Route path="/login" element={<Login />} />
+                <Route path="/register" element={<Register />} />
+                <Route path="/dashboard/*" element={<PlayerDashboard />} />
+                <Route path="/admin/*" element={<AdminDashboard />} />
 
-              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-              <Route path="*" element={<NotFound />} />
-            </Routes>
+                {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </NotificationProvider>
           </AuthProvider>
         </LoadingProvider>
       </BrowserRouter>
