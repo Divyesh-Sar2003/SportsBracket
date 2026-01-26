@@ -24,6 +24,10 @@ import { fetchMatchesForParticipants, fetchMatchResultsForMatches } from "@/serv
 import { fetchTeams } from "@/services/firestore/teams";
 import { createNotification } from "@/services/firestore/notifications";
 import { format } from "date-fns";
+import { useNotifications } from "@/contexts/NotificationContext";
+import { Bell, BellOff, Info } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 const PlayerDashboard = () => {
   const { user, loading, isAdmin } = useAuth();
@@ -182,6 +186,8 @@ const PlayerDashboard = () => {
     return <Navigate to="/admin" replace />;
   }
 
+  const { permission, requestPermission } = useNotifications();
+
   return (
     <SidebarProvider>
       <div className="min-h-screen flex w-full bg-muted/30">
@@ -194,9 +200,27 @@ const PlayerDashboard = () => {
             <Routes>
               <Route index element={
                 <>
-                  <div className="mb-8">
-                    <h1 className="text-3xl font-bold">Player Dashboard</h1>
-                    <p className="text-muted-foreground">Welcome back, {profileName}!</p>
+                  <div className="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div>
+                      <h1 className="text-3xl font-bold">Player Dashboard</h1>
+                      <p className="text-muted-foreground">Welcome back, {profileName}!</p>
+                    </div>
+                    {permission === 'default' && (
+                      <Alert className="max-w-md bg-primary/10 border-primary/20 animate-in fade-in slide-in-from-top-4">
+                        <Bell className="h-4 w-4 text-primary" />
+                        <AlertTitle className="text-sm font-bold">Stay Updated!</AlertTitle>
+                        <AlertDescription className="text-xs flex flex-col gap-2">
+                          Enable push notifications to get alerts for match schedules and results.
+                          <Button
+                            size="sm"
+                            onClick={requestPermission}
+                            className="w-fit bg-primary hover:bg-primary/90 text-white text-[10px] h-7 px-3"
+                          >
+                            Enable Notifications
+                          </Button>
+                        </AlertDescription>
+                      </Alert>
+                    )}
                   </div>
 
                   <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 mb-8">

@@ -2,6 +2,7 @@ import {
   addDoc,
   collection,
   doc,
+  getDoc,
   getDocs,
   orderBy,
   query,
@@ -11,6 +12,8 @@ import {
 } from "firebase/firestore";
 import { db } from "@/integrations/firebase/client";
 import { RegistrationStatus, Registration } from "@/types/tournament";
+import { createNotification } from "./notifications";
+import { logAdminAction } from "./audit";
 
 const registrationsCollection = collection(db, "registrations");
 
@@ -56,11 +59,39 @@ export const createRegistration = async (
 
 export const updateRegistrationStatus = async (
   registrationId: string,
-  status: RegistrationStatus
+  status: RegistrationStatus,
+  adminInfo?: { id: string; name: string }
 ) => {
+  const regDoc = await getDoc(doc(db, "registrations", registrationId));
+  if (!regDoc.exists()) return;
+
+  const registration = regDoc.data() as Registration;
+
   await updateDoc(doc(db, "registrations", registrationId), {
     status,
     updated_at: serverTimestamp(),
+    processed_by_id: adminInfo?.id,
+    processed_by_name: adminInfo?.name,
   });
-};
 
+  // Create notification for the user
+  await createNotification({
+    user_id: registration.user_id,
+    title: `Registration ${status.charAt(0).toUpperCase() + status.slice(1)}`,
+    message: `Your registration for the game has been ${status}.`,
+    type: "REGISTRATION_UPDATE",
+    payload: { registration_id: registrationId, status }
+  });
+
+  // Log admin action
+  if (adminInfo) {
+    await logAdminAction({
+      admin_id: adminInfo.id,
+      admin_name: adminInfo.name,
+      action: `REGISTRATION_${status.toUpperCase()}`,
+      resource_type: "REGISTRATION",
+      resource_id: registrationId,
+      details: `Admin ${adminInfo.name} ${status} registration for user ${registration.user_id}`
+    });
+  }
+};

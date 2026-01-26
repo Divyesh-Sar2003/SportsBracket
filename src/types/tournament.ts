@@ -38,6 +38,8 @@ export interface Registration extends Timestamped {
   user_id: string;
   status: RegistrationStatus;
   notes?: string;
+  processed_by_id?: string;
+  processed_by_name?: string;
 }
 
 export interface Team extends Timestamped {
@@ -102,3 +104,24 @@ export interface LeaderboardEntry extends Timestamped {
   rank?: number;
 }
 
+export interface AdminPermissions {
+  registrations: boolean;
+  participants: boolean;
+  tournaments: boolean;
+  games: boolean;
+  teams: boolean;
+  schedule: boolean;
+  matches: boolean;
+  leaderboard: boolean;
+  audit: boolean;
+}
+
+export interface AuditLog extends Timestamped {
+  id: string;
+  admin_id: string;
+  admin_name: string;
+  action: string;
+  resource_type: string;
+  resource_id: string;
+  details: string;
+}

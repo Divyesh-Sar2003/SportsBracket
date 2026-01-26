@@ -280,7 +280,10 @@ const GamesManagement = () => {
                     type="number"
                     min="1"
                     value={formData.players_per_team}
-                    onChange={(e) => setFormData({ ...formData, players_per_team: parseInt(e.target.value) })}
+                    onChange={(e) => {
+                      const val = parseInt(e.target.value);
+                      setFormData({ ...formData, players_per_team: isNaN(val) ? 0 : val });
+                    }}
                     required
                   />
                 </div>

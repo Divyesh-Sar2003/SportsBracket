@@ -12,12 +12,15 @@ import {
 import { doc, getDoc, serverTimestamp, setDoc } from "firebase/firestore";
 import { useNavigate } from "react-router-dom";
 import { auth, db } from "@/integrations/firebase/client";
+import { AdminPermissions } from "@/types/tournament";
 
 interface AuthContextType {
   user: User | null;
   loading: boolean;
   isAdmin: boolean;
+  isSuperAdmin: boolean;
   isPlayer: boolean;
+  permissions: AdminPermissions | null;
   signUp: (email: string, password: string, metadata: any) => Promise<{ error: any }>;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
   signInWithGoogle: () => Promise<{ error: any; user?: User; isNewUser?: boolean }>;
@@ -31,7 +34,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [isPlayer, setIsPlayer] = useState(false);
+  const [permissions, setPermissions] = useState<AdminPermissions | null>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -41,7 +46,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         await checkAdminRole(currentUser.uid);
       } else {
         setIsAdmin(false);
+        setIsSuperAdmin(false);
         setIsPlayer(false);
+        setPermissions(null);
       }
       setLoading(false);
     });
@@ -49,27 +56,54 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return () => unsubscribe();
   }, []);
 
-  // useEffect(() => {
-  //   if (!loading && user) {
-  //     if (isAdmin) {
-  //       navigate("/admin");
-  //     } else {
-  //       navigate("/dashboard");
-  //     }
-  //   }
-  // }, [user, isAdmin, loading, navigate]);
-
   const checkAdminRole = async (userId: string) => {
     try {
       const roleDoc = await getDoc(doc(db, "user_roles", userId));
       const roleData = roleDoc.exists() ? roleDoc.data() : null;
       const roles = (roleData?.roles as string[] | undefined) ?? [];
-      setIsAdmin(roles.includes("admin"));
-      setIsPlayer(!roles.includes("admin"));
+      const hasAdmin = roles.includes("admin") || roles.includes("super_admin");
+      const hasSuperAdmin = roles.includes("super_admin");
+
+      setIsAdmin(hasAdmin);
+      setIsSuperAdmin(hasSuperAdmin);
+      setIsPlayer(!hasAdmin);
+
+      if (hasSuperAdmin) {
+        // Super Admin has all permissions
+        setPermissions({
+          registrations: true,
+          participants: true,
+          tournaments: true,
+          games: true,
+          teams: true,
+          schedule: true,
+          matches: true,
+          leaderboard: true,
+          audit: true
+        });
+      } else if (hasAdmin) {
+        // Regular admin permissions from firestore
+        const rawPermissions = roleData?.permissions as Partial<AdminPermissions> | undefined;
+        setPermissions({
+          registrations: rawPermissions?.registrations ?? true,
+          participants: rawPermissions?.participants ?? true,
+          tournaments: rawPermissions?.tournaments ?? true,
+          games: rawPermissions?.games ?? true,
+          teams: rawPermissions?.teams ?? true,
+          schedule: rawPermissions?.schedule ?? true,
+          matches: rawPermissions?.matches ?? true,
+          leaderboard: rawPermissions?.leaderboard ?? true,
+          audit: rawPermissions?.audit ?? true
+        });
+      } else {
+        setPermissions(null);
+      }
     } catch (error) {
       console.error("Error checking admin role:", error);
       setIsAdmin(false);
+      setIsSuperAdmin(false);
       setIsPlayer(false);
+      setPermissions(null);
     }
   };
 
@@ -216,7 +250,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, isAdmin, isPlayer, signUp, signIn, signInWithGoogle, signUpWithGoogle, signOut }}>
+    <AuthContext.Provider value={{ user, loading, isAdmin, isSuperAdmin, isPlayer, permissions, signUp, signIn, signInWithGoogle, signUpWithGoogle, signOut }}>
       {children}
     </AuthContext.Provider>
   );

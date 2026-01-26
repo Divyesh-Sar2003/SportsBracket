@@ -14,6 +14,7 @@ import { fetchUsers, User } from "@/services/firestore/users";
 import { Registration, RegistrationStatus } from "@/types/tournament";
 import { Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
 import {
   sendGameRegistrationApprovalNotification,
   sendGameRegistrationRejectionNotification
@@ -27,6 +28,7 @@ const statusVariant: Record<RegistrationStatus, "default" | "secondary" | "destr
 };
 
 const RegistrationsManagement = () => {
+  const { user: currentUser } = useAuth();
   const [tournamentId, setTournamentId] = useState<string>("");
   const [gameId, setGameId] = useState<string>("");
   const [tournaments, setTournaments] = useState<any[]>([]);
@@ -79,7 +81,10 @@ const RegistrationsManagement = () => {
     decision: Extract<RegistrationStatus, "approved" | "rejected">
   ) => {
     // Update status in Firestore
-    await updateRegistrationStatus(registration.id, decision);
+    await updateRegistrationStatus(registration.id, decision, {
+      id: currentUser?.uid || "unknown",
+      name: currentUser?.displayName || currentUser?.email || "Admin"
+    });
 
     // Find the game name for the notification
     const game = games.find((g) => g.id === registration.game_id);
@@ -275,7 +280,11 @@ const RegistrationsManagement = () => {
                             {game?.name ?? "Unknown"}
                           </td>
                           <td className="py-3 px-4">
-                            <Badge variant={statusVariant[registration.status]}>
+                            <Badge
+                              variant={statusVariant[registration.status]}
+                              title={registration.processed_by_name ? `Processed by: ${registration.processed_by_name}` : "Pending review"}
+                              className="cursor-help"
+                            >
                               {registration.status}
                             </Badge>
                           </td>

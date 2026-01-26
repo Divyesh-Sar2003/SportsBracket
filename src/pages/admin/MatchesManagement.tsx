@@ -15,10 +15,12 @@ import { generateSingleEliminationBracket, persistGeneratedMatches } from "@/lib
 import { useToast } from "@/hooks/use-toast";
 import { fetchUsers, User } from "@/services/firestore/users";
 import { fetchTeams } from "@/services/firestore/teams";
+import { useAuth } from "@/contexts/AuthContext";
 
 type TournamentOption = { id: string; name: string };
 
 const MatchesManagement = () => {
+  const { user: currentUser } = useAuth();
   const [tournaments, setTournaments] = useState<TournamentOption[]>([]);
   const [games, setGames] = useState<any[]>([]);
   const [participants, setParticipants] = useState<Participant[]>([]);
@@ -197,6 +199,9 @@ const MatchesManagement = () => {
         score_details: "",
         points_awarded: { [winnerId]: 3 },
         submitted_by: "admin",
+      }, {
+        id: currentUser?.uid || "unknown",
+        name: currentUser?.displayName || currentUser?.email || "Admin"
       });
 
       if (match.next_match_id && match.winner_slot_in_next) {
@@ -204,7 +209,11 @@ const MatchesManagement = () => {
           match.next_match_id,
           match.winner_slot_in_next === "A"
             ? { participant_a_id: winnerId }
-            : { participant_b_id: winnerId }
+            : { participant_b_id: winnerId },
+          {
+            id: currentUser?.uid || "unknown",
+            name: currentUser?.displayName || currentUser?.email || "Admin"
+          }
         );
       }
 
@@ -383,6 +392,9 @@ const MatchesManagement = () => {
                                 }
                                 updateMatch(match.id, {
                                   match_time: newDate.toISOString(),
+                                }, {
+                                  id: currentUser?.uid || "unknown",
+                                  name: currentUser?.displayName || currentUser?.email || "Admin"
                                 });
                               }}
                             />
@@ -393,6 +405,9 @@ const MatchesManagement = () => {
                               onChange={(event) =>
                                 updateMatch(match.id, {
                                   venue: event.target.value,
+                                }, {
+                                  id: currentUser?.uid || "unknown",
+                                  name: currentUser?.displayName || currentUser?.email || "Admin"
                                 })
                               }
                             />
